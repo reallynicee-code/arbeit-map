@@ -13,33 +13,65 @@
   <h1>アルバイトマップ</h1>
   <div id="map"></div>
 
-  <script>
-    function initMap() {
-      const tokyo = { lat: 35.681236, lng: 139.767125 };
+<script>
+  function initMap() {
+    const tokyo = { lat: 35.681236, lng: 139.767125 };
 
-      const map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 12,
-        center: tokyo,
+    const map = new google.maps.Map(document.getElementById("map"), {
+      zoom: 12,
+      center: tokyo,
+    });
+
+    const jobs = [
+      {
+        lat: 35.681236,
+        lng: 139.767125,
+        title: "東京駅カフェスタッフ",
+        description: "駅ナカのカフェで接客",
+        wage: "時給1200円"
+      },
+      {
+        lat: 35.6895,
+        lng: 139.6917,
+        title: "新宿コンビニ店員",
+        description: "夜勤スタッフ募集",
+        wage: "時給1300円"
+      },
+      {
+        lat: 35.658034,
+        lng: 139.701636,
+        title: "渋谷居酒屋ホール",
+        description: "学生歓迎",
+        wage: "時給1250円"
+      }
+    ];
+
+    const infoWindow = new google.maps.InfoWindow();
+
+    jobs.forEach(job => {
+      const marker = new google.maps.Marker({
+        position: { lat: job.lat, lng: job.lng },
+        map: map,
+        title: job.title
       });
 
-      const jobs = [
-        { lat: 35.681236, lng: 139.767125, title: "東京駅カフェスタッフ" },
-        { lat: 35.6895, lng: 139.6917, title: "新宿コンビニ店員" },
-        { lat: 35.658034, lng: 139.701636, title: "渋谷居酒屋ホール" }
-      ];
-
-      jobs.forEach(job => {
-        new google.maps.Marker({
-          position: { lat: job.lat, lng: job.lng },
-          map: map,
-          title: job.title
-        });
+      marker.addListener("click", () => {
+        infoWindow.setContent(`
+          <div>
+            <h3>${job.title}</h3>
+            <p>${job.description}</p>
+            <strong>${job.wage}</strong>
+          </div>
+        `);
+        infoWindow.open(map, marker);
       });
-    }
-  </script>
+    });
+  }
+</script>
 
   <script async
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDmqdJRIJFxxNcOFce0rSidVINyLGfk8_o&callback=initMap">
   </script>
 </body>
 </html>
+
