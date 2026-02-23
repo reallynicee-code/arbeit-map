@@ -22,30 +22,19 @@
         center: tokyo,
       });
 
-      <script>
-  function initMap() {
-    const tokyo = { lat: 35.681236, lng: 139.767125 };
+      const jobs = [
+        { lat: 35.681236, lng: 139.767125, title: "東京駅カフェスタッフ" },
+        { lat: 35.6895, lng: 139.6917, title: "新宿コンビニ店員" },
+        { lat: 35.658034, lng: 139.701636, title: "渋谷居酒屋ホール" }
+      ];
 
-    const map = new google.maps.Map(document.getElementById("map"), {
-      zoom: 12,
-      center: tokyo,
-    });
-
-    const jobs = [
-      { lat: 35.681236, lng: 139.767125, title: "東京駅カフェスタッフ" },
-      { lat: 35.6895, lng: 139.6917, title: "新宿コンビニ店員" },
-      { lat: 35.658034, lng: 139.701636, title: "渋谷居酒屋ホール" }
-    ];
-
-    jobs.forEach(job => {
-      new google.maps.Marker({
-        position: { lat: job.lat, lng: job.lng },
-        map: map,
-        title: job.title
+      jobs.forEach(job => {
+        new google.maps.Marker({
+          position: { lat: job.lat, lng: job.lng },
+          map: map,
+          title: job.title
+        });
       });
-    });
-  }
-</script>
     }
   </script>
 
@@ -54,5 +43,3 @@
   </script>
 </body>
 </html>
-
-
