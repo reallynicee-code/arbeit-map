@@ -21,6 +21,8 @@
 
 <script>
   let map;
+  let autocomplete;
+  let geocoder;
 
   function initMap() {
     const tokyo = { lat: 35.681236, lng: 139.767125 };
@@ -30,25 +32,29 @@
       center: tokyo,
     });
 
-    // ★ Autocomplete設定
-    const input = document.getElementById("autocomplete");
-    const autocomplete = new google.maps.places.Autocomplete(input);
+    geocoder = new google.maps.Geocoder();
 
+    const input = document.getElementById("autocomplete");
+    autocomplete = new google.maps.places.Autocomplete(input);
     autocomplete.bindTo("bounds", map);
 
+    // 候補を選んだ場合
     autocomplete.addListener("place_changed", () => {
       const place = autocomplete.getPlace();
-
-      if (!place.geometry || !place.geometry.location) {
-        alert("場所が見つかりませんでした");
-        return;
+      if (place.geometry) {
+        moveToLocation(place.geometry.location);
       }
-
-      map.panTo(place.geometry.location);
-      map.setZoom(14);
     });
 
-    // --- 既存の求人マーカー処理 ---
+    // Enter押した場合
+    input.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        searchByGeocoder(input.value);
+      }
+    });
+
+    // ---- 既存マーカー処理 ----
     const jobs = [
       {
         lat: 35.681236,
@@ -97,6 +103,21 @@
       });
     });
   }
+
+  function moveToLocation(location) {
+    map.panTo(location);
+    map.setZoom(14);
+  }
+
+  function searchByGeocoder(address) {
+    geocoder.geocode({ address: address }, (results, status) => {
+      if (status === "OK") {
+        moveToLocation(results[0].geometry.location);
+      } else {
+        alert("場所が見つかりませんでした: " + status);
+      }
+    });
+  }
 </script>
 
 <script
@@ -106,5 +127,6 @@
 ></script>
 </body>
 </html>
+
 
 
