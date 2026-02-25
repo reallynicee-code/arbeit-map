@@ -2,83 +2,82 @@
 <html>
 <head>
   <title>アルバイトマップ</title>
-
   <style>
-    body {
-      margin: 0;
-      font-family: sans-serif;
-    }
+    body { margin:0; font-family:sans-serif; }
 
-    #map {
-      height: 100vh;
+    #map { height:100vh; }
+
+    #autocomplete {
+      position:absolute;
+      top:20px;
+      left:20px;
+      z-index:1000;
+      width:300px;
+      padding:8px;
     }
 
     #radiusControl {
-      position: absolute;
-      right: 20px;
-      top: 120px;
-      width: 70px;
-      height: 420px;
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 10px;
-      z-index: 999;
+      position:absolute;
+      right:20px;
+      top:120px;
+      width:80px;
+      height:420px;
+      background:white;
+      border-radius:20px;
+      box-shadow:0 4px 10px rgba(0,0,0,0.2);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      padding:10px;
+      z-index:999;
     }
 
     #radiusLabel {
-      font-size: 14px;
-      margin-bottom: 15px;
+      font-weight:bold;
+      margin-bottom:10px;
     }
 
     #sliderTrack {
-      position: relative;
-      width: 6px;
-      height: 340px;
-      background: #ddd;
-      border-radius: 3px;
+      position:relative;
+      width:6px;
+      height:340px;
+      background:#eee;
+      border-radius:3px;
+    }
+
+    /* 目盛り線 */
+    .tick {
+      position:absolute;
+      left:-10px;
+      width:25px;
+      height:1px;
+      background:#999;
     }
 
     #sliderThumb {
-      position: absolute;
-      left: -7px;
-      width: 20px;
-      height: 20px;
-      background: white;
-      border: 2px solid #4285F4;
-      border-radius: 50%;
-      cursor: pointer;
-    }
-
-    #autocomplete {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      z-index: 1000;
-      width: 300px;
-      padding: 8px;
+      position:absolute;
+      left:-7px;
+      width:20px;
+      height:20px;
+      background:white;
+      border:2px solid #ff4da6;
+      border-radius:50%;
+      cursor:pointer;
     }
   </style>
 </head>
 
 <body>
 
-<input
-  id="autocomplete"
-  type="text"
-  placeholder="住所・駅・施設を検索"
-/>
+<input id="autocomplete" placeholder="住所・駅・施設を検索">
 
 <div id="map"></div>
 
 <div id="radiusControl">
+  <div>半径</div>
   <div id="radiusLabel">1.0 km</div>
-  <div id="sliderTrack">
-    <div id="sliderThumb"></div>
-  </div>
+  <div id="sliderTrack"></div>
+  <div id="sliderThumb"></div>
 </div>
 
 <script>
@@ -91,132 +90,152 @@ let geocoder;
 let autocomplete;
 
 const jobs = [
-  { lat: 35.681236, lng: 139.767125, title: "東京駅カフェスタッフ" },
-  { lat: 35.6895, lng: 139.6917, title: "新宿コンビニ店員" },
-  { lat: 35.658034, lng: 139.701636, title: "渋谷居酒屋ホール" }
+  { lat:35.681236, lng:139.767125, title:"東京駅カフェスタッフ", desc:"駅ナカ接客" },
+  { lat:35.6895, lng:139.6917, title:"新宿コンビニ店員", desc:"夜勤募集" },
+  { lat:35.658034, lng:139.701636, title:"渋谷居酒屋ホール", desc:"学生歓迎" }
 ];
 
-function getDistance(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a =
-    Math.sin(dLat/2)**2 +
-    Math.cos(lat1*Math.PI/180) *
-    Math.cos(lat2*Math.PI/180) *
-    Math.sin(dLng/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+function getDistance(a,b,c,d){
+  const R=6371;
+  const dLat=(c-a)*Math.PI/180;
+  const dLng=(d-b)*Math.PI/180;
+  const x=Math.sin(dLat/2)**2+
+  Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*
+  Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
 
-function drawCircle(lat, lng) {
-  if (circle) circle.setMap(null);
-
-  circle = new google.maps.Circle({
+function drawCircle(lat,lng){
+  if(circle) circle.setMap(null);
+  circle=new google.maps.Circle({
     map,
-    center: { lat, lng },
-    radius: radiusKm * 1000,
-    fillColor: "#4285F4",
-    fillOpacity: 0.2,
-    strokeColor: "#4285F4",
-    strokeWeight: 2
+    center:{lat,lng},
+    radius:radiusKm*1000,
+    fillColor:"#ff4da6",
+    fillOpacity:0.2,
+    strokeColor:"#ff4da6",
+    strokeWeight:2
   });
 }
 
-function showNearbyJobs(lat, lng) {
-  markers.forEach(m => m.setMap(null));
-  markers = [];
+function showNearby(lat,lng){
+  markers.forEach(m=>m.setMap(null));
+  markers=[];
+  const info=new google.maps.InfoWindow();
 
-  jobs.forEach(job => {
-    const d = getDistance(lat, lng, job.lat, job.lng);
-    if (d <= radiusKm) {
-      const marker = new google.maps.Marker({
-        position: { lat: job.lat, lng: job.lng },
+  jobs.forEach(job=>{
+    const d=getDistance(lat,lng,job.lat,job.lng);
+    if(d<=radiusKm){
+      const marker=new google.maps.Marker({
+        position:{lat:job.lat,lng:job.lng},
         map,
-        title: job.title
+        title:job.title,
+        icon:"http://maps.google.com/mapfiles/ms/icons/pink-dot.png"
       });
+
+      marker.addListener("click",()=>{
+        info.setContent(`<b>${job.title}</b><br>${job.desc}`);
+        info.open(map,marker);
+      });
+
       markers.push(marker);
     }
   });
 }
 
-function moveToLocation(location) {
-  currentCenter = location;
-  map.panTo(location);
+function moveToLocation(loc){
+  currentCenter=loc;
+  map.panTo(loc);
   map.setZoom(14);
-  showNearbyJobs(location.lat(), location.lng());
-  drawCircle(location.lat(), location.lng());
+  showNearby(loc.lat(),loc.lng());
+  drawCircle(loc.lat(),loc.lng());
 }
 
-function initRadiusSlider() {
-  const track = document.getElementById("sliderTrack");
-  const thumb = document.getElementById("sliderThumb");
-  const label = document.getElementById("radiusLabel");
+function initRadiusSlider(){
+  const track=document.getElementById("sliderTrack");
+  const thumb=document.getElementById("sliderThumb");
+  const label=document.getElementById("radiusLabel");
 
-  const trackHeight = 340;
-  const maxKm = 5;
+  const height=340;
+  const max=5;
 
-  function updateFromY(y) {
-    const percent = 1 - (y / trackHeight);
-    let value = percent * maxKm;
+  // 目盛り生成
+  for(let i=0;i<=50;i++){
+    const tick=document.createElement("div");
+    tick.className="tick";
+    tick.style.top=(height-(i/50)*height)+"px";
+    track.appendChild(tick);
+  }
 
-    if (value <= 1) value = Math.round(value * 10) / 10;
-    else value = Math.round(value);
+  function update(y){
+    const percent=1-(y/height);
+    let v=percent*max;
 
-    value = Math.max(0, Math.min(5, value));
+    if(v<=1) v=Math.round(v*10)/10;
+    else v=Math.round(v);
 
-    radiusKm = value;
-    label.textContent = radiusKm.toFixed(1) + " km";
-    thumb.style.top = (trackHeight - (radiusKm/maxKm)*trackHeight - 10) + "px";
+    v=Math.max(0,Math.min(5,v));
 
-    if (currentCenter) {
-      showNearbyJobs(currentCenter.lat(), currentCenter.lng());
-      drawCircle(currentCenter.lat(), currentCenter.lng());
+    radiusKm=v;
+    label.textContent=radiusKm.toFixed(1)+" km";
+    thumb.style.top=(height-(radiusKm/max)*height-10)+"px";
+
+    if(currentCenter){
+      showNearby(currentCenter.lat(),currentCenter.lng());
+      drawCircle(currentCenter.lat(),currentCenter.lng());
     }
   }
 
-  thumb.addEventListener("mousedown", e => {
-    function move(e2) {
-      const rect = track.getBoundingClientRect();
-      let y = e2.clientY - rect.top;
-      y = Math.max(0, Math.min(trackHeight, y));
-      updateFromY(y);
+  thumb.addEventListener("mousedown",e=>{
+    function move(e2){
+      const rect=track.getBoundingClientRect();
+      let y=e2.clientY-rect.top;
+      y=Math.max(0,Math.min(height,y));
+      update(y);
     }
-    document.addEventListener("mousemove", move);
-    document.addEventListener("mouseup", () => {
-      document.removeEventListener("mousemove", move);
-    }, { once: true });
+    document.addEventListener("mousemove",move);
+    document.addEventListener("mouseup",()=>document.removeEventListener("mousemove",move),{once:true});
   });
 
-  updateFromY(trackHeight * (1 - radiusKm/maxKm));
+  update(height*(1-radiusKm/max));
 }
 
-function initMap() {
-  const tokyo = { lat: 35.681236, lng: 139.767125 };
+function initMap(){
+  const tokyo={lat:35.681236,lng:139.767125};
 
-  map = new google.maps.Map(document.getElementById("map"), {
-    zoom: 12,
-    center: tokyo,
+  map=new google.maps.Map(document.getElementById("map"),{
+    zoom:12,
+    center:tokyo
   });
 
-  geocoder = new google.maps.Geocoder();
+  geocoder=new google.maps.Geocoder();
+  const input=document.getElementById("autocomplete");
 
-  const input = document.getElementById("autocomplete");
-  autocomplete = new google.maps.places.Autocomplete(input);
-  autocomplete.bindTo("bounds", map);
+  autocomplete=new google.maps.places.Autocomplete(input);
+  autocomplete.bindTo("bounds",map);
 
-  autocomplete.addListener("place_changed", () => {
-    const place = autocomplete.getPlace();
-    if (place.geometry) moveToLocation(place.geometry.location);
+  autocomplete.addListener("place_changed",()=>{
+    const place=autocomplete.getPlace();
+    if(place.geometry) moveToLocation(place.geometry.location);
+  });
+
+  // Enterキー対応（曖昧入力OK）
+  input.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){
+      e.preventDefault();
+      geocoder.geocode({address:input.value},(results,status)=>{
+        if(status==="OK"){
+          moveToLocation(results[0].geometry.location);
+        }
+      });
+    }
   });
 
   initRadiusSlider();
 }
 </script>
 
-<script
-  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDmqdJRIJFxxNcOFce0rSidVINyLGfk8_o&libraries=places&callback=initMap"
-  async defer>
-</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDmqdJRIJFxxNcOFce0rSidVINyLGfk8_o&libraries=places&callback=initMap" async defer></script>
 
 </body>
 </html>
