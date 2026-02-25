@@ -10,18 +10,45 @@
   </style>
 </head>
 <body>
+<input
+  id="autocomplete"
+  type="text"
+  placeholder="住所・駅・施設を検索"
+  style="width:300px; padding:8px; margin:10px;"
+/>
   <h1>アルバイトマップ</h1>
   <div id="map"></div>
 
 <script>
+  let map;
+
   function initMap() {
     const tokyo = { lat: 35.681236, lng: 139.767125 };
 
-    const map = new google.maps.Map(document.getElementById("map"), {
+    map = new google.maps.Map(document.getElementById("map"), {
       zoom: 12,
       center: tokyo,
     });
 
+    // ★ Autocomplete設定
+    const input = document.getElementById("autocomplete");
+    const autocomplete = new google.maps.places.Autocomplete(input);
+
+    autocomplete.bindTo("bounds", map);
+
+    autocomplete.addListener("place_changed", () => {
+      const place = autocomplete.getPlace();
+
+      if (!place.geometry || !place.geometry.location) {
+        alert("場所が見つかりませんでした");
+        return;
+      }
+
+      map.panTo(place.geometry.location);
+      map.setZoom(14);
+    });
+
+    // --- 既存の求人マーカー処理 ---
     const jobs = [
       {
         lat: 35.681236,
@@ -52,7 +79,10 @@
       const marker = new google.maps.Marker({
         position: { lat: job.lat, lng: job.lng },
         map: map,
-        title: job.title
+        title: job.title,
+        icon: {
+          url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+        }
       });
 
       marker.addListener("click", () => {
@@ -69,9 +99,12 @@
   }
 </script>
 
-  <script async
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDmqdJRIJFxxNcOFce0rSidVINyLGfk8_o&callback=initMap">
-  </script>
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDmqdJRIJFxxNcOFce0rSidVINyLGfk8_o&libraries=places&callback=initMap"
+  async
+  defer
+></script>
 </body>
 </html>
+
 
