@@ -2,11 +2,54 @@
 <html>
 <head>
   <title>アルバイトマップ</title>
+
   <style>
+    /* ← ここにCSSを書く */
+
     #map {
-      height: 90vh;
-      width: 100%;
+      height: 100vh;
     }
+
+    #radiusControl {
+      position: absolute;
+      right: 20px;
+      top: 120px;
+      width: 60px;
+      height: 400px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px;
+      z-index: 999;
+    }
+
+    #radiusLabel {
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    #sliderTrack {
+      position: relative;
+      width: 6px;
+      height: 330px;
+      background: #ddd;
+      border-radius: 3px;
+    }
+
+    #sliderThumb {
+      position: absolute;
+      left: -7px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border: 2px solid #4285F4;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
   </style>
 </head>
 <body>
@@ -18,14 +61,22 @@
 />
   <h1>アルバイトマップ</h1>
   <div id="map"></div>
+  <div id="radiusControl">
+  <div id="radiusLabel">1.0 km</div>
+  <div id="sliderTrack">
+    <div id="sliderThumb"></div>
+  </div>
+</div>
 
 <script>
   let map;
   let autocomplete;
   let geocoder;
-  const RADIUS_KM = 5;
+  let radiusKm = 1; // ← デフォルト1km
+　let circle = null;
+　let currentCenter = null;
 // ---- 既存マーカー処理 ----
-    const jobs = [
+  const jobs = [
       {
         lat: 35.681236,
         lng: 139.767125,
@@ -152,6 +203,36 @@ function showNearbyJobs(centerLat, centerLng) {
         infoWindow.open(map, marker);
       });
     });
+    function initMap() {
+  const tokyo = { lat: 35.681236, lng: 139.767125 };
+
+  map = new google.maps.Map(document.getElementById("map"), {
+    zoom: 12,
+    center: tokyo,
+  });
+
+  geocoder = new google.maps.Geocoder();
+
+  const input = document.getElementById("autocomplete");
+  autocomplete = new google.maps.places.Autocomplete(input);
+  autocomplete.bindTo("bounds", map);
+
+  autocomplete.addListener("place_changed", () => {
+    const place = autocomplete.getPlace();
+    if (place.geometry) {
+      moveToLocation(place.geometry.location);
+    }
+  });
+
+  input.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      searchByGeocoder(input.value);
+    }
+  });
+
+  // 👇 ここに追加
+  initRadiusSlider();
   }
 
 function moveToLocation(location) {
@@ -174,6 +255,56 @@ function moveToLocation(location) {
       }
     });
   }
+  function initRadiusSlider() {
+  const track = document.getElementById("sliderTrack");
+  const thumb = document.getElementById("sliderThumb");
+  const label = document.getElementById("radiusLabel");
+
+  const trackHeight = 330;
+  const maxKm = 5;
+
+  function updateRadiusFromPosition(y) {
+    const percent = 1 - (y / trackHeight);
+    let rawKm = percent * maxKm;
+
+    if (rawKm <= 1) {
+      rawKm = Math.round(rawKm * 10) / 10;
+    } else {
+      rawKm = Math.round(rawKm);
+    }
+
+    if (rawKm < 0) rawKm = 0;
+    if (rawKm > 5) rawKm = 5;
+
+    radiusKm = rawKm;
+    label.textContent = radiusKm.toFixed(1) + " km";
+
+    thumb.style.top = (trackHeight - (radiusKm / maxKm) * trackHeight - 10) + "px";
+
+    if (currentCenter) {
+      showNearbyJobs(currentCenter.lat(), currentCenter.lng());
+      drawCircle(currentCenter.lat(), currentCenter.lng());
+    }
+  }
+
+  thumb.addEventListener("mousedown", function(e) {
+    function move(e2) {
+      const rect = track.getBoundingClientRect();
+      let y = e2.clientY - rect.top;
+      if (y < 0) y = 0;
+      if (y > trackHeight) y = trackHeight;
+      updateRadiusFromPosition(y);
+    }
+
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", function() {
+      document.removeEventListener("mousemove", move);
+    }, { once: true });
+  });
+
+  // 初期位置
+  updateRadiusFromPosition(trackHeight * (1 - radiusKm / maxKm));
+}
 </script>
 
 <script
@@ -183,6 +314,7 @@ function moveToLocation(location) {
 ></script>
 </body>
 </html>
+
 
 
 
