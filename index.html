@@ -23,7 +23,82 @@
   let map;
   let autocomplete;
   let geocoder;
+  const RADIUS_KM = 5;
+// ---- 既存マーカー処理 ----
+    const jobs = [
+      {
+        lat: 35.681236,
+        lng: 139.767125,
+        title: "東京駅カフェスタッフ",
+        description: "駅ナカのカフェで接客",
+        wage: "時給1200円"
+      },
+      {
+        lat: 35.6895,
+        lng: 139.6917,
+        title: "新宿コンビニ店員",
+        description: "夜勤スタッフ募集",
+        wage: "時給1300円"
+      },
+      {
+        lat: 35.658034,
+        lng: 139.701636,
+        title: "渋谷居酒屋ホール",
+        description: "学生歓迎",
+        wage: "時給1250円"
+      }
+    ];
+  
+function getDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371; // 地球半径(km)
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
 
+  const a =
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI/180) *
+    Math.cos(lat2 * Math.PI/180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+  let circle;
+
+function drawCircle(lat, lng) {
+  if (circle) circle.setMap(null);
+
+  circle = new google.maps.Circle({
+    strokeColor: "#4285F4",
+    strokeOpacity: 0.8,
+    strokeWeight: 2,
+    fillColor: "#4285F4",
+    fillOpacity: 0.2,
+    map,
+    center: { lat, lng },
+    radius: RADIUS_KM * 1000
+  });
+}
+let markers = [];
+
+function showNearbyJobs(centerLat, centerLng) {
+  markers.forEach(marker => marker.setMap(null));
+  markers = [];
+
+  jobs.forEach(job => {
+    const distance = getDistance(centerLat, centerLng, job.lat, job.lng);
+
+    if (distance <= RADIUS_KM) {
+      const marker = new google.maps.Marker({
+        position: { lat: job.lat, lng: job.lng },
+        map: map,
+        title: job.title
+      });
+
+      markers.push(marker);
+    }
+  });
+}
   function initMap() {
     const tokyo = { lat: 35.681236, lng: 139.767125 };
 
@@ -54,31 +129,6 @@
       }
     });
 
-    // ---- 既存マーカー処理 ----
-    const jobs = [
-      {
-        lat: 35.681236,
-        lng: 139.767125,
-        title: "東京駅カフェスタッフ",
-        description: "駅ナカのカフェで接客",
-        wage: "時給1200円"
-      },
-      {
-        lat: 35.6895,
-        lng: 139.6917,
-        title: "新宿コンビニ店員",
-        description: "夜勤スタッフ募集",
-        wage: "時給1300円"
-      },
-      {
-        lat: 35.658034,
-        lng: 139.701636,
-        title: "渋谷居酒屋ホール",
-        description: "学生歓迎",
-        wage: "時給1250円"
-      }
-    ];
-
     const infoWindow = new google.maps.InfoWindow();
 
     jobs.forEach(job => {
@@ -104,10 +154,16 @@
     });
   }
 
-  function moveToLocation(location) {
-    map.panTo(location);
-    map.setZoom(14);
-  }
+function moveToLocation(location) {
+  map.panTo(location);
+  map.setZoom(13);
+
+  const centerLat = location.lat();
+  const centerLng = location.lng();
+
+  showNearbyJobs(centerLat, centerLng);
+  drawCircle(centerLat, centerLng);
+}
 
   function searchByGeocoder(address) {
     geocoder.geocode({ address: address }, (results, status) => {
@@ -127,6 +183,7 @@
 ></script>
 </body>
 </html>
+
 
 
 
