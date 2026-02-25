@@ -4,7 +4,10 @@
   <title>アルバイトマップ</title>
 
   <style>
-    /* ← ここにCSSを書く */
+    body {
+      margin: 0;
+      font-family: sans-serif;
+    }
 
     #map {
       height: 100vh;
@@ -14,8 +17,8 @@
       position: absolute;
       right: 20px;
       top: 120px;
-      width: 60px;
-      height: 400px;
+      width: 70px;
+      height: 420px;
       background: white;
       border-radius: 20px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
@@ -28,13 +31,13 @@
 
     #radiusLabel {
       font-size: 14px;
-      margin-bottom: 10px;
+      margin-bottom: 15px;
     }
 
     #sliderTrack {
       position: relative;
       width: 6px;
-      height: 330px;
+      height: 340px;
       background: #ddd;
       border-radius: 3px;
     }
@@ -50,18 +53,28 @@
       cursor: pointer;
     }
 
+    #autocomplete {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 1000;
+      width: 300px;
+      padding: 8px;
+    }
   </style>
 </head>
+
 <body>
+
 <input
   id="autocomplete"
   type="text"
   placeholder="住所・駅・施設を検索"
-  style="width:300px; padding:8px; margin:10px;"
 />
-  <h1>アルバイトマップ</h1>
-  <div id="map"></div>
-  <div id="radiusControl">
+
+<div id="map"></div>
+
+<div id="radiusControl">
   <div id="radiusLabel">1.0 km</div>
   <div id="sliderTrack">
     <div id="sliderThumb"></div>
@@ -69,141 +82,115 @@
 </div>
 
 <script>
-  let map;
-  let autocomplete;
-  let geocoder;
-  let radiusKm = 1; // ← デフォルト1km
-　let circle = null;
-　let currentCenter = null;
-// ---- 既存マーカー処理 ----
-  const jobs = [
-      {
-        lat: 35.681236,
-        lng: 139.767125,
-        title: "東京駅カフェスタッフ",
-        description: "駅ナカのカフェで接客",
-        wage: "時給1200円"
-      },
-      {
-        lat: 35.6895,
-        lng: 139.6917,
-        title: "新宿コンビニ店員",
-        description: "夜勤スタッフ募集",
-        wage: "時給1300円"
-      },
-      {
-        lat: 35.658034,
-        lng: 139.701636,
-        title: "渋谷居酒屋ホール",
-        description: "学生歓迎",
-        wage: "時給1250円"
-      }
-    ];
-  
+let map;
+let radiusKm = 1;
+let circle = null;
+let currentCenter = null;
+let markers = [];
+let geocoder;
+let autocomplete;
+
+const jobs = [
+  { lat: 35.681236, lng: 139.767125, title: "東京駅カフェスタッフ" },
+  { lat: 35.6895, lng: 139.6917, title: "新宿コンビニ店員" },
+  { lat: 35.658034, lng: 139.701636, title: "渋谷居酒屋ホール" }
+];
+
 function getDistance(lat1, lng1, lat2, lng2) {
-  const R = 6371; // 地球半径(km)
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
-
   const a =
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI/180) *
-    Math.cos(lat2 * Math.PI/180) *
-    Math.sin(dLng/2) * Math.sin(dLng/2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
+    Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) *
+    Math.cos(lat2*Math.PI/180) *
+    Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
-  let circle;
 
 function drawCircle(lat, lng) {
   if (circle) circle.setMap(null);
 
   circle = new google.maps.Circle({
-    strokeColor: "#4285F4",
-    strokeOpacity: 0.8,
-    strokeWeight: 2,
-    fillColor: "#4285F4",
-    fillOpacity: 0.2,
     map,
     center: { lat, lng },
-    radius: RADIUS_KM * 1000
+    radius: radiusKm * 1000,
+    fillColor: "#4285F4",
+    fillOpacity: 0.2,
+    strokeColor: "#4285F4",
+    strokeWeight: 2
   });
 }
-let markers = [];
 
-function showNearbyJobs(centerLat, centerLng) {
-  markers.forEach(marker => marker.setMap(null));
+function showNearbyJobs(lat, lng) {
+  markers.forEach(m => m.setMap(null));
   markers = [];
 
   jobs.forEach(job => {
-    const distance = getDistance(centerLat, centerLng, job.lat, job.lng);
-
-    if (distance <= RADIUS_KM) {
+    const d = getDistance(lat, lng, job.lat, job.lng);
+    if (d <= radiusKm) {
       const marker = new google.maps.Marker({
         position: { lat: job.lat, lng: job.lng },
-        map: map,
+        map,
         title: job.title
       });
-
       markers.push(marker);
     }
   });
 }
-  function initMap() {
-    const tokyo = { lat: 35.681236, lng: 139.767125 };
 
-    map = new google.maps.Map(document.getElementById("map"), {
-      zoom: 12,
-      center: tokyo,
-    });
+function moveToLocation(location) {
+  currentCenter = location;
+  map.panTo(location);
+  map.setZoom(14);
+  showNearbyJobs(location.lat(), location.lng());
+  drawCircle(location.lat(), location.lng());
+}
 
-    geocoder = new google.maps.Geocoder();
+function initRadiusSlider() {
+  const track = document.getElementById("sliderTrack");
+  const thumb = document.getElementById("sliderThumb");
+  const label = document.getElementById("radiusLabel");
 
-    const input = document.getElementById("autocomplete");
-    autocomplete = new google.maps.places.Autocomplete(input);
-    autocomplete.bindTo("bounds", map);
+  const trackHeight = 340;
+  const maxKm = 5;
 
-    // 候補を選んだ場合
-    autocomplete.addListener("place_changed", () => {
-      const place = autocomplete.getPlace();
-      if (place.geometry) {
-        moveToLocation(place.geometry.location);
-      }
-    });
+  function updateFromY(y) {
+    const percent = 1 - (y / trackHeight);
+    let value = percent * maxKm;
 
-    // Enter押した場合
-    input.addEventListener("keydown", function (event) {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        searchByGeocoder(input.value);
-      }
-    });
+    if (value <= 1) value = Math.round(value * 10) / 10;
+    else value = Math.round(value);
 
-    const infoWindow = new google.maps.InfoWindow();
+    value = Math.max(0, Math.min(5, value));
 
-    jobs.forEach(job => {
-      const marker = new google.maps.Marker({
-        position: { lat: job.lat, lng: job.lng },
-        map: map,
-        title: job.title,
-        icon: {
-          url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
-        }
-      });
+    radiusKm = value;
+    label.textContent = radiusKm.toFixed(1) + " km";
+    thumb.style.top = (trackHeight - (radiusKm/maxKm)*trackHeight - 10) + "px";
 
-      marker.addListener("click", () => {
-        infoWindow.setContent(`
-          <div>
-            <h3>${job.title}</h3>
-            <p>${job.description}</p>
-            <strong>${job.wage}</strong>
-          </div>
-        `);
-        infoWindow.open(map, marker);
-      });
-    });
-    function initMap() {
+    if (currentCenter) {
+      showNearbyJobs(currentCenter.lat(), currentCenter.lng());
+      drawCircle(currentCenter.lat(), currentCenter.lng());
+    }
+  }
+
+  thumb.addEventListener("mousedown", e => {
+    function move(e2) {
+      const rect = track.getBoundingClientRect();
+      let y = e2.clientY - rect.top;
+      y = Math.max(0, Math.min(trackHeight, y));
+      updateFromY(y);
+    }
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", () => {
+      document.removeEventListener("mousemove", move);
+    }, { once: true });
+  });
+
+  updateFromY(trackHeight * (1 - radiusKm/maxKm));
+}
+
+function initMap() {
   const tokyo = { lat: 35.681236, lng: 139.767125 };
 
   map = new google.maps.Map(document.getElementById("map"), {
@@ -219,103 +206,17 @@ function showNearbyJobs(centerLat, centerLng) {
 
   autocomplete.addListener("place_changed", () => {
     const place = autocomplete.getPlace();
-    if (place.geometry) {
-      moveToLocation(place.geometry.location);
-    }
+    if (place.geometry) moveToLocation(place.geometry.location);
   });
 
-  input.addEventListener("keydown", function (event) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      searchByGeocoder(input.value);
-    }
-  });
-
-  // 👇 ここに追加
   initRadiusSlider();
-  }
-
-function moveToLocation(location) {
-  map.panTo(location);
-  map.setZoom(13);
-
-  const centerLat = location.lat();
-  const centerLng = location.lng();
-
-  showNearbyJobs(centerLat, centerLng);
-  drawCircle(centerLat, centerLng);
-}
-
-  function searchByGeocoder(address) {
-    geocoder.geocode({ address: address }, (results, status) => {
-      if (status === "OK") {
-        moveToLocation(results[0].geometry.location);
-      } else {
-        alert("場所が見つかりませんでした: " + status);
-      }
-    });
-  }
-  function initRadiusSlider() {
-  const track = document.getElementById("sliderTrack");
-  const thumb = document.getElementById("sliderThumb");
-  const label = document.getElementById("radiusLabel");
-
-  const trackHeight = 330;
-  const maxKm = 5;
-
-  function updateRadiusFromPosition(y) {
-    const percent = 1 - (y / trackHeight);
-    let rawKm = percent * maxKm;
-
-    if (rawKm <= 1) {
-      rawKm = Math.round(rawKm * 10) / 10;
-    } else {
-      rawKm = Math.round(rawKm);
-    }
-
-    if (rawKm < 0) rawKm = 0;
-    if (rawKm > 5) rawKm = 5;
-
-    radiusKm = rawKm;
-    label.textContent = radiusKm.toFixed(1) + " km";
-
-    thumb.style.top = (trackHeight - (radiusKm / maxKm) * trackHeight - 10) + "px";
-
-    if (currentCenter) {
-      showNearbyJobs(currentCenter.lat(), currentCenter.lng());
-      drawCircle(currentCenter.lat(), currentCenter.lng());
-    }
-  }
-
-  thumb.addEventListener("mousedown", function(e) {
-    function move(e2) {
-      const rect = track.getBoundingClientRect();
-      let y = e2.clientY - rect.top;
-      if (y < 0) y = 0;
-      if (y > trackHeight) y = trackHeight;
-      updateRadiusFromPosition(y);
-    }
-
-    document.addEventListener("mousemove", move);
-    document.addEventListener("mouseup", function() {
-      document.removeEventListener("mousemove", move);
-    }, { once: true });
-  });
-
-  // 初期位置
-  updateRadiusFromPosition(trackHeight * (1 - radiusKm / maxKm));
 }
 </script>
 
 <script
   src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDmqdJRIJFxxNcOFce0rSidVINyLGfk8_o&libraries=places&callback=initMap"
-  async
-  defer
-></script>
+  async defer>
+</script>
+
 </body>
 </html>
-
-
-
-
-
