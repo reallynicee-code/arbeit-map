@@ -89,10 +89,15 @@ let markers = [];
 let geocoder;
 let autocomplete;
 
+const radiusSteps = [
+  0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,
+  2,3,4,5
+];
+
 const jobs = [
-  { lat:35.681236, lng:139.767125, title:"東京駅カフェスタッフ", desc:"駅ナカ接客" },
-  { lat:35.6895, lng:139.6917, title:"新宿コンビニ店員", desc:"夜勤募集" },
-  { lat:35.658034, lng:139.701636, title:"渋谷居酒屋ホール", desc:"学生歓迎" }
+  { lat:35.681236, lng:139.767125, title:"東京駅カフェスタッフ", wage:"時給1200円", condition:"週1〜OK" },
+  { lat:35.6895, lng:139.6917, title:"新宿コンビニ店員", wage:"時給1300円", condition:"週2〜OK" },
+  { lat:35.658034, lng:139.701636, title:"渋谷居酒屋ホール", wage:"時給1250円", condition:"週1〜OK" }
 ];
 
 function getDistance(a,b,c,d){
@@ -134,7 +139,13 @@ function showNearby(lat,lng){
       });
 
       marker.addListener("click",()=>{
-        info.setContent(`<b>${job.title}</b><br>${job.desc}`);
+        info.setContent(`
+          <div>
+            <b>${job.title}</b><br>
+            ${job.wage}<br>
+            ${job.condition}
+          </div>
+        `);
         info.open(map,marker);
       });
 
@@ -157,28 +168,14 @@ function initRadiusSlider(){
   const label=document.getElementById("radiusLabel");
 
   const height=340;
-  const max=5;
+  const stepCount = radiusSteps.length - 1;
 
-  // 目盛り生成
-  for(let i=0;i<=50;i++){
-    const tick=document.createElement("div");
-    tick.className="tick";
-    tick.style.top=(height-(i/50)*height)+"px";
-    track.appendChild(tick);
-  }
+  function updateByIndex(index){
+    radiusKm = radiusSteps[index];
+    label.textContent = radiusKm.toFixed(1) + " km";
 
-  function update(y){
-    const percent=1-(y/height);
-    let v=percent*max;
-
-    if(v<=1) v=Math.round(v*10)/10;
-    else v=Math.round(v);
-
-    v=Math.max(0,Math.min(5,v));
-
-    radiusKm=v;
-    label.textContent=radiusKm.toFixed(1)+" km";
-    thumb.style.top=(height-(radiusKm/max)*height-10)+"px";
+    const y = height - (index/stepCount)*height;
+    thumb.style.top = (y - 10) + "px";
 
     if(currentCenter){
       showNearby(currentCenter.lat(),currentCenter.lng());
@@ -186,18 +183,31 @@ function initRadiusSlider(){
     }
   }
 
-  thumb.addEventListener("mousedown",e=>{
-    function move(e2){
+  // 目盛り生成（必要分だけ）
+  radiusSteps.forEach((step,i)=>{
+    const tick=document.createElement("div");
+    tick.className="tick";
+    const y = height - (i/stepCount)*height;
+    tick.style.top = y + "px";
+    track.appendChild(tick);
+  });
+
+  thumb.addEventListener("mousedown",()=>{
+    function move(e){
       const rect=track.getBoundingClientRect();
-      let y=e2.clientY-rect.top;
+      let y=e.clientY-rect.top;
       y=Math.max(0,Math.min(height,y));
-      update(y);
+
+      const ratio = 1 - (y/height);
+      const index = Math.round(ratio*stepCount);
+      updateByIndex(index);
     }
     document.addEventListener("mousemove",move);
     document.addEventListener("mouseup",()=>document.removeEventListener("mousemove",move),{once:true});
   });
 
-  update(height*(1-radiusKm/max));
+  // 初期位置
+  updateByIndex(radiusSteps.indexOf(radiusKm));
 }
 
 function initMap(){
@@ -219,7 +229,6 @@ function initMap(){
     if(place.geometry) moveToLocation(place.geometry.location);
   });
 
-  // Enterキー対応（曖昧入力OK）
   input.addEventListener("keydown",e=>{
     if(e.key==="Enter"){
       e.preventDefault();
@@ -239,3 +248,4 @@ function initMap(){
 
 </body>
 </html>
+
