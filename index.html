@@ -3,14 +3,54 @@
 <head>
   <title>アルバイトマップ</title>
   <style>
-    body { margin:0; font-family:sans-serif; }
-
-    #map {
-  height: 100vh;
-  width: 100%;
-  position: relative;
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
+#map {
+  height: 100%;
+  width: 100%;
+}
+
+/* UIパネル */
+#ui-panel {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400px;
+  z-index: 1000;
+}
+
+/* 検索窓 */
+#searchInput {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
+/* 半径UI */
+#radiusContainer {
+  margin-top: 10px;
+  width: 100%;
+}
+
+#radiusSlider {
+  width: 100%;
+}
+
+#radiusLabel {
+  text-align: right;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+/* 中央クロスヘア */
 #crosshair {
   position: absolute;
   top: 50%;
@@ -52,6 +92,18 @@
 <input id="autocomplete" placeholder="住所・駅・施設を検索">
 
 <div id="map"></div>
+
+<!-- UIオーバーレイ -->
+<div id="ui-panel">
+  <input id="searchInput" type="text" placeholder="住所・駅・施設を検索" />
+
+  <div id="radiusContainer">
+    <input type="range" id="radiusSlider" min="500" max="5000" step="500" value="1000">
+    <div id="radiusLabel">半径 1km</div>
+  </div>
+</div>
+
+<!-- 中央クロスヘア -->
 <div id="crosshair"></div>
 
 <div id="radiusControl">
@@ -67,7 +119,34 @@ let map;
 let markers = [];
 let circle;
 let currentCenter = null;
-let radius = 1000; // 初期半径（m）
+let radius = 1000;
+
+document.getElementById("radiusSlider").addEventListener("input", function() {
+  radius = parseInt(this.value);
+  document.getElementById("radiusLabel").innerText =
+    "半径 " + (radius / 1000) + "km";
+
+  updateFromCenter();
+});
+
+function updateFromCenter() {
+  const center = map.getCenter();
+
+  if (circle) circle.setMap(null);
+
+  circle = new google.maps.Circle({
+    map: map,
+    center: center,
+    radius: radius,
+    strokeColor: "#ff4da6",
+    strokeOpacity: 0.8,
+    strokeWeight: 2,
+    fillColor: "#ff4da6",
+    fillOpacity: 0.15
+  });
+
+  showNearby(center.lat(), center.lng());
+}
 
 function initMap() {
 
@@ -217,6 +296,7 @@ function getDistance(lat1, lng1, lat2, lng2) {
 
 </body>
 </html>
+
 
 
 
