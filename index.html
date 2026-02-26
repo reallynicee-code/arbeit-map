@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>アルバイトマップ</title>
-  <style>
+<title>アルバイトマップ</title>
+<style>
 html, body {
   height: 100%;
   margin: 0;
@@ -14,30 +14,32 @@ html, body {
   width: 100%;
 }
 
-/* UIパネル */
+/* 左上UI */
 #ui-panel {
   position: absolute;
   top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 400px;
+  left: 20px;
+  width: 320px;
   z-index: 1000;
+  background: white;
+  padding: 12px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 /* 検索窓 */
 #searchInput {
   width: 100%;
-  padding: 10px;
-  font-size: 16px;
-  border-radius: 8px;
+  padding: 8px;
+  font-size: 14px;
+  border-radius: 6px;
   border: 1px solid #ccc;
   box-sizing: border-box;
 }
 
-/* 半径UI */
+/* 半径 */
 #radiusContainer {
-  margin-top: 10px;
-  width: 100%;
+  margin-top: 12px;
 }
 
 #radiusSlider {
@@ -45,9 +47,9 @@ html, body {
 }
 
 #radiusLabel {
+  margin-top: 6px;
+  font-size: 13px;
   text-align: right;
-  font-size: 14px;
-  margin-top: 4px;
 }
 
 /* 中央クロスヘア */
@@ -84,52 +86,115 @@ html, body {
   width: 100%;
   transform: translateY(-50%);
 }
-  </style>
+</style>
 </head>
 
 <body>
 
-<input id="autocomplete" placeholder="住所・駅・施設を検索">
-
 <div id="map"></div>
 
-<!-- UIオーバーレイ -->
 <div id="ui-panel">
-  <input id="searchInput" type="text" placeholder="住所・駅・施設を検索" />
+  <input id="searchInput" type="text" placeholder="住所・駅・施設を検索">
 
   <div id="radiusContainer">
-    <input type="range" id="radiusSlider" min="500" max="5000" step="500" value="1000">
-    <div id="radiusLabel">半径 1km</div>
+    <input type="range" id="radiusSlider" min="0" max="5000" step="100" value="1000">
+    <div id="radiusLabel"></div>
   </div>
 </div>
 
-<!-- 中央クロスヘア -->
 <div id="crosshair"></div>
-
-<div id="radiusControl">
-  <div>半径</div>
-  <div id="radiusLabel">1.0 km</div>
-　<div id="sliderTrack">
-  　<div id="sliderThumb"></div>
-</div>
-</div>
 
 <script>
 let map;
 let markers = [];
 let circle;
-let currentCenter = null;
 let radius = 1000;
 
-document.getElementById("radiusSlider").addEventListener("input", function() {
+/* ===========================
+   半径フォーマット
+=========================== */
+function formatRadius(r) {
+  if (r < 1000) {
+    return r + " m";
+  } else {
+    return (r / 1000) + " km";
+  }
+}
+
+/* ===========================
+   半径スライダー制御
+=========================== */
+const slider = document.getElementById("radiusSlider");
+const label = document.getElementById("radiusLabel");
+
+function adjustStep(value) {
+  if (value <= 1000) {
+    slider.step = 100;
+  } else {
+    slider.step = 1000;
+    slider.value = Math.round(value / 1000) * 1000;
+  }
+}
+
+slider.addEventListener("input", function() {
+  let val = parseInt(this.value);
+
+  adjustStep(val);
+
   radius = parseInt(this.value);
-  document.getElementById("radiusLabel").innerText =
-    "半径 " + (radius / 1000) + "km";
+  label.innerText = "半径 " + formatRadius(radius);
 
   updateFromCenter();
 });
 
+/* ===========================
+   地図初期化
+=========================== */
+function initMap() {
+
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: { lat: 35.681236, lng: 139.767125 },
+    zoom: 14,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false
+  });
+
+  map.addListener("idle", updateFromCenter);
+
+  const input = document.getElementById("searchInput");
+  const autocomplete = new google.maps.places.Autocomplete(input);
+  autocomplete.bindTo("bounds", map);
+
+  autocomplete.addListener("place_changed", function () {
+    const place = autocomplete.getPlace();
+    if (!place.geometry) return;
+
+    map.panTo(place.geometry.location);
+    map.setZoom(15);
+  });
+
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: input.value }, function (results, status) {
+        if (status === "OK") {
+          map.panTo(results[0].geometry.location);
+          map.setZoom(15);
+        }
+      });
+    }
+  });
+
+  label.innerText = "半径 " + formatRadius(radius);
+}
+
+/* ===========================
+   中心基準更新
+=========================== */
 function updateFromCenter() {
+
   const center = map.getCenter();
 
   if (circle) circle.setMap(null);
@@ -148,79 +213,6 @@ function updateFromCenter() {
   showNearby(center.lat(), center.lng());
 }
 
-function initMap() {
-
-  map = new google.maps.Map(document.getElementById("map"), {
-    center: { lat: 35.681236, lng: 139.767125 }, // 初期位置（東京駅）
-    zoom: 14,
-    mapTypeControl: false,
-    streetViewControl: false,
-    fullscreenControl: false
-  });
-
-  // 🔥 マップ操作終了時に自動検索
-  map.addListener("idle", function () {
-    updateFromCenter();
-  });
-
-  // 🔥 オートコンプリート（曖昧検索可）
-  const input = document.getElementById("searchInput");
-  const autocomplete = new google.maps.places.Autocomplete(input);
-  autocomplete.bindTo("bounds", map);
-
-  autocomplete.addListener("place_changed", function () {
-    const place = autocomplete.getPlace();
-    if (!place.geometry) return;
-
-    map.panTo(place.geometry.location);
-    map.setZoom(15);
-  });
-
-  // 🔥 Enterキーでも検索
-  input.addEventListener("keydown", function (e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ address: input.value }, function (results, status) {
-        if (status === "OK") {
-          map.panTo(results[0].geometry.location);
-          map.setZoom(15);
-        }
-      });
-    }
-  });
-}
-
-/* ===========================
-   中心基準で更新
-=========================== */
-function updateFromCenter() {
-  const center = map.getCenter();
-  currentCenter = center;
-
-  drawCircle(center.lat(), center.lng());
-  showNearby(center.lat(), center.lng());
-}
-
-/* ===========================
-   円描画
-=========================== */
-function drawCircle(lat, lng) {
-
-  if (circle) circle.setMap(null);
-
-  circle = new google.maps.Circle({
-    strokeColor: "#ff4da6",
-    strokeOpacity: 0.8,
-    strokeWeight: 2,
-    fillColor: "#ff4da6",
-    fillOpacity: 0.15,
-    map: map,
-    center: { lat: lat, lng: lng },
-    radius: radius
-  });
-}
-
 /* ===========================
    マーカー表示
 =========================== */
@@ -228,17 +220,11 @@ function showNearby(lat, lng) {
 
   clearMarkers();
 
-  // ここはあなたのバイトデータ配列に置き換えてください
   const jobs = window.jobData || [];
 
   jobs.forEach(job => {
 
-    const distance = getDistance(
-      lat,
-      lng,
-      job.lat,
-      job.lng
-    );
+    const distance = getDistance(lat, lng, job.lat, job.lng);
 
     if (distance <= radius) {
 
@@ -260,43 +246,27 @@ function showNearby(lat, lng) {
   });
 }
 
-/* ===========================
-   マーカー削除
-=========================== */
 function clearMarkers() {
   markers.forEach(marker => marker.setMap(null));
   markers = [];
 }
 
-/* ===========================
-   距離計算（m）
-=========================== */
 function getDistance(lat1, lng1, lat2, lng2) {
-
   const R = 6371000;
   const toRad = deg => deg * Math.PI / 180;
-
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
-
   const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-    Math.cos(toRad(lat2)) *
-    Math.sin(dLng / 2) *
-    Math.sin(dLng / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
+    Math.sin(dLat/2)*Math.sin(dLat/2) +
+    Math.cos(toRad(lat1))*
+    Math.cos(toRad(lat2))*
+    Math.sin(dLng/2)*Math.sin(dLng/2);
+  const c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  return R*c;
 }
 </script>
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDmqdJRIJFxxNcOFce0rSidVINyLGfk8_o&libraries=places&callback=initMap" async defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAeN86oLR4R-KCV85VY3fawtP4SVmPkF2Q&libraries=places&callback=initMap" async defer></script>
 
 </body>
 </html>
-
-
-
-
