@@ -5,65 +5,45 @@
   <style>
     body { margin:0; font-family:sans-serif; }
 
-    #map { height:100vh; }
+    #map {
+  height: 100vh;
+  width: 100%;
+  position: relative;
+}
 
-    #autocomplete {
-      position:absolute;
-      top:20px;
-      left:20px;
-      z-index:1000;
-      width:300px;
-      padding:8px;
-    }
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30px;
+  height: 30px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 999;
+}
 
-    #radiusControl {
-      position:absolute;
-      right:20px;
-      top:120px;
-      width:80px;
-      height:420px;
-      background:white;
-      border-radius:20px;
-      box-shadow:0 4px 10px rgba(0,0,0,0.2);
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      padding:10px;
-      z-index:999;
-    }
+#crosshair::before,
+#crosshair::after {
+  content: "";
+  position: absolute;
+  background: #ff4da6;
+}
 
-    #radiusLabel {
-      font-weight:bold;
-      margin-bottom:10px;
-    }
+#crosshair::before {
+  left: 50%;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  transform: translateX(-50%);
+}
 
-    #sliderTrack {
-      position:relative;
-      width:6px;
-      height:340px;
-      background:#eee;
-      border-radius:3px;
-    }
-
-    /* 目盛り線 */
-    .tick {
-      position:absolute;
-      left:-10px;
-      width:25px;
-      height:1px;
-      background:#999;
-    }
-
-    #sliderThumb {
-      position:absolute;
-      left:-7px;
-      width:20px;
-      height:20px;
-      background:white;
-      border:2px solid #ff4da6;
-      border-radius:50%;
-      cursor:pointer;
-    }
+#crosshair::after {
+  top: 50%;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  transform: translateY(-50%);
+}
   </style>
 </head>
 
@@ -72,6 +52,7 @@
 <input id="autocomplete" placeholder="住所・駅・施設を検索">
 
 <div id="map"></div>
+<div id="crosshair"></div>
 
 <div id="radiusControl">
   <div>半径</div>
@@ -83,71 +64,116 @@
 
 <script>
 let map;
-let radiusKm = 1;
-let circle = null;
-let currentCenter = null;
 let markers = [];
-let geocoder;
-let autocomplete;
+let circle;
+let currentCenter = null;
+let radius = 1000; // 初期半径（m）
 
-const radiusSteps = [
-  0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,
-  2,3,4,5
-];
+function initMap() {
 
-const jobs = [
-  { lat:35.681236, lng:139.767125, title:"東京駅カフェスタッフ", wage:"時給1200円", condition:"週1〜OK" },
-  { lat:35.6895, lng:139.6917, title:"新宿コンビニ店員", wage:"時給1300円", condition:"週2〜OK" },
-  { lat:35.658034, lng:139.701636, title:"渋谷居酒屋ホール", wage:"時給1250円", condition:"週1〜OK" }
-];
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: { lat: 35.681236, lng: 139.767125 }, // 初期位置（東京駅）
+    zoom: 14,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false
+  });
 
-function getDistance(a,b,c,d){
-  const R=6371;
-  const dLat=(c-a)*Math.PI/180;
-  const dLng=(d-b)*Math.PI/180;
-  const x=Math.sin(dLat/2)**2+
-  Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*
-  Math.sin(dLng/2)**2;
-  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
-}
+  // 🔥 マップ操作終了時に自動検索
+  map.addListener("idle", function () {
+    updateFromCenter();
+  });
 
-function drawCircle(lat,lng){
-  if(circle) circle.setMap(null);
-  circle=new google.maps.Circle({
-    map,
-    center:{lat,lng},
-    radius:radiusKm*1000,
-    fillColor:"#ff4da6",
-    fillOpacity:0.2,
-    strokeColor:"#ff4da6",
-    strokeWeight:2
+  // 🔥 オートコンプリート（曖昧検索可）
+  const input = document.getElementById("searchInput");
+  const autocomplete = new google.maps.places.Autocomplete(input);
+  autocomplete.bindTo("bounds", map);
+
+  autocomplete.addListener("place_changed", function () {
+    const place = autocomplete.getPlace();
+    if (!place.geometry) return;
+
+    map.panTo(place.geometry.location);
+    map.setZoom(15);
+  });
+
+  // 🔥 Enterキーでも検索
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: input.value }, function (results, status) {
+        if (status === "OK") {
+          map.panTo(results[0].geometry.location);
+          map.setZoom(15);
+        }
+      });
+    }
   });
 }
 
-function showNearby(lat,lng){
-  markers.forEach(m=>m.setMap(null));
-  markers=[];
-  const info=new google.maps.InfoWindow();
+/* ===========================
+   中心基準で更新
+=========================== */
+function updateFromCenter() {
+  const center = map.getCenter();
+  currentCenter = center;
 
-  jobs.forEach(job=>{
-    const d=getDistance(lat,lng,job.lat,job.lng);
-    if(d<=radiusKm){
-      const marker=new google.maps.Marker({
-        position:{lat:job.lat,lng:job.lng},
-        map,
-        title:job.title,
-        icon:"http://maps.google.com/mapfiles/ms/icons/pink-dot.png"
-      });
+  drawCircle(center.lat(), center.lng());
+  showNearby(center.lat(), center.lng());
+}
 
-      marker.addListener("click",()=>{
-        info.setContent(`
-          <div>
-            <b>${job.title}</b><br>
-            ${job.wage}<br>
-            ${job.condition}
-          </div>
-        `);
-        info.open(map,marker);
+/* ===========================
+   円描画
+=========================== */
+function drawCircle(lat, lng) {
+
+  if (circle) circle.setMap(null);
+
+  circle = new google.maps.Circle({
+    strokeColor: "#ff4da6",
+    strokeOpacity: 0.8,
+    strokeWeight: 2,
+    fillColor: "#ff4da6",
+    fillOpacity: 0.15,
+    map: map,
+    center: { lat: lat, lng: lng },
+    radius: radius
+  });
+}
+
+/* ===========================
+   マーカー表示
+=========================== */
+function showNearby(lat, lng) {
+
+  clearMarkers();
+
+  // ここはあなたのバイトデータ配列に置き換えてください
+  const jobs = window.jobData || [];
+
+  jobs.forEach(job => {
+
+    const distance = getDistance(
+      lat,
+      lng,
+      job.lat,
+      job.lng
+    );
+
+    if (distance <= radius) {
+
+      const marker = new google.maps.Marker({
+        position: { lat: job.lat, lng: job.lng },
+        map: map,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: "#ff4da6",
+          fillOpacity: 1,
+          strokeColor: "#ffffff",
+          strokeWeight: 2
+        }
       });
 
       markers.push(marker);
@@ -155,104 +181,35 @@ function showNearby(lat,lng){
   });
 }
 
-function moveToLocation(loc){
-  currentCenter=loc;
-  map.panTo(loc);
-  map.setZoom(14);
-  showNearby(loc.lat(),loc.lng());
-  drawCircle(loc.lat(),loc.lng());
+/* ===========================
+   マーカー削除
+=========================== */
+function clearMarkers() {
+  markers.forEach(marker => marker.setMap(null));
+  markers = [];
 }
 
-function initRadiusSlider(){
-  const track = document.getElementById("sliderTrack");
-  const thumb = document.getElementById("sliderThumb");
-  const label = document.getElementById("radiusLabel");
+/* ===========================
+   距離計算（m）
+=========================== */
+function getDistance(lat1, lng1, lat2, lng2) {
 
-  const height = 340;
+  const R = 6371000;
+  const toRad = deg => deg * Math.PI / 180;
 
-  const radiusSteps = [
-    0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,
-    2,3,4,5
-  ];
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
 
-  const stepCount = radiusSteps.length - 1;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+    Math.cos(toRad(lat2)) *
+    Math.sin(dLng / 2) *
+    Math.sin(dLng / 2);
 
-  // 目盛り生成
-  track.innerHTML = '<div id="sliderThumb"></div>';
-  const newThumb = document.getElementById("sliderThumb");
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-  radiusSteps.forEach((step,i)=>{
-    const tick = document.createElement("div");
-    tick.className = "tick";
-    const y = height - (i/stepCount)*height;
-    tick.style.top = y + "px";
-    track.appendChild(tick);
-  });
-
-  function updateByIndex(index){
-    radiusKm = radiusSteps[index];
-    label.textContent = radiusKm.toFixed(1) + " km";
-
-    const y = height - (index/stepCount)*height;
-    newThumb.style.top = (y - 10) + "px";
-
-    if(currentCenter){
-      showNearby(currentCenter.lat(),currentCenter.lng());
-      drawCircle(currentCenter.lat(),currentCenter.lng());
-    }
-  }
-
-  newThumb.addEventListener("mousedown",()=>{
-    function move(e){
-      const rect = track.getBoundingClientRect();
-      let y = e.clientY - rect.top;
-      y = Math.max(0, Math.min(height, y));
-
-      const ratio = 1 - (y/height);
-      const index = Math.round(ratio * stepCount);
-      updateByIndex(index);
-    }
-
-    document.addEventListener("mousemove", move);
-    document.addEventListener("mouseup", ()=>{
-      document.removeEventListener("mousemove", move);
-    }, { once:true });
-  });
-
-  updateByIndex(radiusSteps.indexOf(radiusKm));
-}
-
-function initMap(){
-  const tokyo={lat:35.681236,lng:139.767125};
-
-  map=new google.maps.Map(document.getElementById("map"),{
-    zoom:12,
-    center:tokyo
-  });
-
-  geocoder=new google.maps.Geocoder();
-  const input=document.getElementById("autocomplete");
-
-  autocomplete=new google.maps.places.Autocomplete(input);
-  autocomplete.bindTo("bounds",map);
-
-  autocomplete.addListener("place_changed",()=>{
-    const place=autocomplete.getPlace();
-    if(place.geometry) moveToLocation(place.geometry.location);
-  });
-
-  input.addEventListener("keydown",e=>{
-    if(e.key==="Enter"){
-      e.preventDefault();
-      geocoder.geocode({address:input.value},(results,status)=>{
-        if(status==="OK"){
-          moveToLocation(results[0].geometry.location);
-        }
-      });
-    }
-  });
-
-  initRadiusSlider();
+  return R * c;
 }
 </script>
 
@@ -260,5 +217,6 @@ function initMap(){
 
 </body>
 </html>
+
 
 
