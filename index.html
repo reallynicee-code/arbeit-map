@@ -235,8 +235,9 @@ function createCenterMarker(position){
   const wrapper = document.createElement("div");
   wrapper.style.width = "28px";
   wrapper.style.height = "28px";
-  wrapper.style.position = "relative";
-  wrapper.style.transform = "translate(-50%, -50%)";
+  wrapper.style.display = "flex";
+  wrapper.style.alignItems = "center";
+  wrapper.style.justifyContent = "center";
 
   wrapper.innerHTML = `
     <svg width="28" height="28" viewBox="0 0 28 28">
@@ -258,8 +259,21 @@ function createCenterMarker(position){
 
 /* 円更新 */
 function updateCircle(center){
-  circle.setCenter(center);
-  circle.setRadius(radius);
+
+  if(!circle){
+    circle = new google.maps.Circle({
+      map,
+      center,
+      radius,
+      strokeColor:"#ff4da6",
+      strokeWeight:2,
+      fillColor:"#ff4da6",
+      fillOpacity:0.15
+    });
+  } else {
+    circle.setCenter(center);
+    circle.setRadius(radius);
+  }
 
   if(locked && centerMarker){
     centerMarker.position = center;
@@ -267,14 +281,7 @@ function updateCircle(center){
 
   showNearby(center.lat(), center.lng());
 }
-
-  if(locked && centerMarker){
-    centerMarker.position=center;
-  }
-
-  showNearby(center.lat(),center.lng());
-}
-
+  
 /* 青ピン */
 function createJobMarker(job){
 
@@ -363,6 +370,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
