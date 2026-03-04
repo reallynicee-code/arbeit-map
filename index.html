@@ -1,242 +1,219 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-<meta charset="utf-8">
-<title>アルバイトマップ</title>
+<meta charset="UTF-8" />
+<title>Arbeits Map</title>
 
 <style>
-html,body{
-  height:100%;
-  margin:0;
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
 }
 
-#map{
-  height:100%;
+#map {
+  height: 100%;
+  width: 100%;
+  position: relative;
 }
 
-#ui{
-  position:absolute;
-  top:20px;
-  left:20px;
-  width:340px;
-  background:white;
-  padding:14px;
-  border-radius:12px;
-  box-shadow:0 6px 18px rgba(0,0,0,0.18);
-  z-index:1000;
-  font-family:sans-serif;
+/* クロスヘア（画面中央固定） */
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1000;
 }
 
-#search{
-  width:100%;
-  padding:8px;
-  border-radius:6px;
-  border:1px solid #ccc;
-  box-sizing:border-box;
+#crosshair::before,
+#crosshair::after {
+  content: "";
+  position: absolute;
+  background: red;
 }
 
-#slider{
-  width:100%;
-  margin-top:12px;
+#crosshair::before {
+  left: 50%;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  transform: translateX(-50%);
 }
 
-#radiusLabel{
-  margin-top:6px;
-  font-size:13px;
-  text-align:right;
+#crosshair::after {
+  top: 50%;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  transform: translateY(-50%);
 }
 
-#lockBtn{
-  width:100%;
-  margin-top:10px;
-  padding:6px;
-  border:none;
-  border-radius:6px;
-  background:#ff4da6;
-  color:white;
-  cursor:pointer;
-}
-
-#lockBtn.active{
-  background:#333;
+/* コントロール */
+.control-box {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  z-index: 1001;
+  width: 220px;
 }
 </style>
 </head>
-
 <body>
 
 <div id="map"></div>
+<div id="crosshair"></div>
 
-<div id="ui">
-  <input id="search" placeholder="住所・駅・施設を検索">
-  <input type="range" id="slider" min="100" max="5000" step="100" value="1000">
-  <div id="radiusLabel"></div>
-  <button id="lockBtn">円の位置を固定</button>
+<div class="control-box">
+  半径 <span id="radiusValue">1</span> km<br><br>
+  <input type="range" id="radiusSlider" min="1" max="5" step="1" value="1" style="width:100%">
+  <br><br>
+  <button onclick="toggleFix()">固定（クリックで解除）</button>
 </div>
 
 <script>
 let map;
 let circle;
-let radius = 1000;
-let locked = false;
-let lockedCenter = null;
-let centerMarker = null;
-let markers = [];
-let activeInfo = null;
+let centerMarker;
+let fixed = false;
+let activeInfoWindow = null;
 
-const jobs = [
-  {lat:35.681236,lng:139.767125,title:"東京駅カフェスタッフ",days:"週2日〜OK",wage:"時給1200円",image:"https://picsum.photos/300/120?1"},
-  {lat:35.6895,lng:139.6917,title:"新宿コンビニ店員",days:"週3日〜OK",wage:"時給1300円",image:"https://picsum.photos/300/120?2"},
-  {lat:35.658034,lng:139.701636,title:"渋谷居酒屋ホール",days:"週1日〜OK",wage:"時給1250円",image:"https://picsum.photos/300/120?3"},
-  {lat:35.6794,lng:139.7648,title:"KITTE丸の内販売スタッフ",days:"週2日〜OK",wage:"時給1250円",image:"https://picsum.photos/300/120?4"},
-  {lat:35.6764,lng:139.7632,title:"東京国際フォーラム受付",days:"週3日〜OK",wage:"時給1350円",image:"https://picsum.photos/300/120?5"}
-];
+function initMap() {
 
-function initMap(){
-
-  map = new google.maps.Map(document.getElementById("map"),{
-    center:{lat:35.681236,lng:139.767125},
-    zoom:14,
-    mapId:"ed7852573fd62be93ad25879"
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: { lat: 35.6895, lng: 139.6917 },
+    zoom: 13,
+    mapId: "ed7852573fd62be93ad25879"
   });
 
-  map.addListener("idle",()=>{
-    if(!locked){
-      updateCircle(map.getCenter());
+  updateCircle();
+
+  map.addListener("center_changed", () => {
+    if (!fixed) updateCircle();
+  });
+
+  document.getElementById("radiusSlider")
+    .addEventListener("input", function () {
+      document.getElementById("radiusValue").textContent = this.value;
+      updateCircle();
+    });
+
+  addJobs();
+}
+
+function updateCircle() {
+  const center = map.getCenter();
+  const radius = document.getElementById("radiusSlider").value * 1000;
+
+  if (circle) circle.setMap(null);
+
+  circle = new google.maps.Circle({
+    strokeColor: "#ff69b4",
+    strokeOpacity: 1,
+    strokeWeight: 2,
+    fillColor: "#ff69b4",
+    fillOpacity: 0.2,
+    map: map,
+    center: center,
+    radius: radius
+  });
+
+  if (fixed) {
+    setCenterMarker(center);
+  }
+}
+
+function setCenterMarker(position) {
+  if (centerMarker) centerMarker.setMap(null);
+
+  centerMarker = new google.maps.Marker({
+    position: position,
+    map: map,
+    label: {
+      text: "✕",
+      color: "black",
+      fontSize: "20px",
+      fontWeight: "bold"
+    },
+    clickable: false
+  });
+}
+
+function toggleFix() {
+  fixed = !fixed;
+
+  if (fixed) {
+    setCenterMarker(map.getCenter());
+  } else {
+    if (centerMarker) {
+      centerMarker.setMap(null);
+      centerMarker = null;
     }
-  });
-
-  document.getElementById("slider").addEventListener("input",e=>{
-    let v = parseInt(e.target.value);
-
-    if(v < 1000){
-      e.target.step = 100;
-    }else{
-      e.target.step = 1000;
-      v = Math.round(v/1000)*1000;
-      e.target.value = v;
-    }
-
-    radius = v;
-    updateLabel();
-    updateCircle(locked ? lockedCenter : map.getCenter());
-  });
-
-  document.getElementById("lockBtn").addEventListener("click",()=>{
-    if(locked){
-      locked=false;
-      if(centerMarker) centerMarker.map=null;
-      document.getElementById("lockBtn").classList.remove("active");
-      document.getElementById("lockBtn").innerText="円の位置を固定";
-    }else{
-      locked=true;
-      lockedCenter=map.getCenter();
-      createCenterMarker(lockedCenter);
-      document.getElementById("lockBtn").classList.add("active");
-      document.getElementById("lockBtn").innerText="固定中（クリックで解除）";
-      updateCircle(lockedCenter);
-    }
-  });
-
-  updateLabel();
+  }
 }
 
-function updateLabel(){
-  const label=document.getElementById("radiusLabel");
-  label.innerText = radius<1000 ? "半径 "+radius+" m" : "半径 "+(radius/1000)+" km";
-}
+function addJobs() {
 
-function createCenterMarker(position){
-  if(centerMarker) centerMarker.map=null;
+  const jobs = [
+    {lat:35.6895,lng:139.6917,title:"カフェスタッフ",company:"Tokyo Cafe",wage:1200},
+    {lat:35.695,lng:139.7,title:"コンビニ店員",company:"MiniStop",wage:1150},
+    {lat:35.685,lng:139.68,title:"イベントスタッフ",company:"Event Co.",wage:1300}
+  ];
 
-  const div=document.createElement("div");
-  div.style.fontSize="28px";
-  div.style.fontWeight="bold";
-  div.style.color="black";
-  div.innerHTML="✕";
+  jobs.forEach(job => {
 
-  centerMarker=new google.maps.marker.AdvancedMarkerElement({
-    map:map,
-    position:position,
-    content:div
+    const marker = new google.maps.Marker({
+      position: {lat:job.lat,lng:job.lng},
+      map: map
+    });
+
+    const infoWindow = new google.maps.InfoWindow({
+      content: `
+        <strong>${job.title}</strong><br>
+        ${job.company}<br>
+        時給: ${job.wage}円
+      `
+    });
+
+    // ホバー表示
+    marker.addListener("mouseover", () => {
+      if (activeInfoWindow !== infoWindow) {
+        infoWindow.open(map, marker);
+      }
+    });
+
+    marker.addListener("mouseout", () => {
+      if (activeInfoWindow !== infoWindow) {
+        infoWindow.close();
+      }
+    });
+
+    // クリック固定（常に1つだけ）
+    marker.addListener("click", () => {
+
+      if (activeInfoWindow && activeInfoWindow !== infoWindow) {
+        activeInfoWindow.close();
+      }
+
+      activeInfoWindow = infoWindow;
+      infoWindow.open(map, marker);
+    });
+
   });
-}
-
-function updateCircle(center){
-  if(circle) circle.setMap(null);
-
-  circle=new google.maps.Circle({
-    map:map,
-    center:center,
-    radius:radius,
-    strokeColor:"#ff4da6",
-    strokeWeight:2,
-    fillColor:"#ff4da6",
-    fillOpacity:0.15
-  });
-
-  showJobs(center.lat(),center.lng());
-}
-
-function showJobs(lat,lng){
-  markers.forEach(m=>m.map=null);
-  markers=[];
-
-  jobs.forEach(job=>{
-    if(distance(lat,lng,job.lat,job.lng)<=radius){
-      createJobMarker(job);
-    }
-  });
-}
-
-function createJobMarker(job){
-
-  const pin=new google.maps.marker.PinElement({
-    background:"#1e90ff",
-    borderColor:"#1e90ff",
-    glyphText:"求",
-    glyphColor:"white"
-  });
-
-  const marker=new google.maps.marker.AdvancedMarkerElement({
-    map:map,
-    position:{lat:job.lat,lng:job.lng},
-    content:pin
-  });
-
-  const info=new google.maps.InfoWindow({
-    content:`
-      <div style="width:240px">
-        <img src="${job.image}" style="width:100%;border-radius:8px;">
-        <h3 style="margin:8px 0 4px 0;">${job.title}</h3>
-        <div>${job.days}</div>
-        <div>${job.wage}</div>
-      </div>
-    `
-  });
-
-  marker.addEventListener("gmp-click",()=>{
-    if(activeInfo) activeInfo.close();
-    info.open(map,marker);
-    activeInfo=info;
-  });
-
-  markers.push(marker);
-}
-
-function distance(lat1,lng1,lat2,lng2){
-  const R=6371000;
-  const toRad=d=>d*Math.PI/180;
-  const dLat=toRad(lat2-lat1);
-  const dLng=toRad(lng2-lng1);
-  const a=Math.sin(dLat/2)**2+
-    Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*
-    Math.sin(dLng/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 </script>
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAeN86oLR4R-KCV85VY3fawtP4SVmPkF2Q&libraries=marker&callback=initMap" async defer></script>
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAeN86oLR4R-KCV85VY3fawtP4SVmPkF2Q&callback=initMap"
+  async defer>
+</script>
 
 </body>
 </html>
