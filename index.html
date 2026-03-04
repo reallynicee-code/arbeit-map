@@ -258,18 +258,15 @@ function createCenterMarker(position){
 
 /* 円更新 */
 function updateCircle(center){
+  circle.setCenter(center);
+  circle.setRadius(radius);
 
-  if(circle) circle.setMap(null);
+  if(locked && centerMarker){
+    centerMarker.position = center;
+  }
 
-  circle=new google.maps.Circle({
-    map,
-    center,
-    radius,
-    strokeColor:"#ff4da6",
-    strokeWeight:2,
-    fillColor:"#ff4da6",
-    fillOpacity:0.15
-  });
+  showNearby(center.lat(), center.lng());
+}
 
   if(locked && centerMarker){
     centerMarker.position=center;
@@ -366,6 +363,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
