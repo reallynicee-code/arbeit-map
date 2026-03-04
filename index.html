@@ -235,6 +235,8 @@ function createCenterMarker(position){
   const wrapper = document.createElement("div");
   wrapper.style.width = "28px";
   wrapper.style.height = "28px";
+  wrapper.style.position = "absolute";
+  wrapper.style.transform = "translate(-50%, -50%)";
 
   wrapper.innerHTML = `
     <svg width="28" height="28" viewBox="0 0 28 28">
@@ -250,10 +252,7 @@ function createCenterMarker(position){
   return new google.maps.marker.AdvancedMarkerElement({
     map,
     position,
-    content: wrapper,
-
-    // ★ これが重要
-    anchor: new google.maps.Point(14, 14)
+    content: wrapper
   });
 }
 
@@ -370,6 +369,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
