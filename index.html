@@ -271,6 +271,47 @@ function createJobMarker(job){
     content:pin.element
   });
 
+  /* 吹き出し */
+  const info=new google.maps.InfoWindow({
+    content:`
+      <div style="width:240px">
+        <img src="${job.image}" style="width:100%;border-radius:8px;">
+        <h3 style="margin:8px 0 4px 0;">${job.title}</h3>
+        <div>${job.days}</div>
+        <div>${job.wage}</div>
+      </div>
+    `
+  });
+
+  let hoverOpen=false;
+
+  /* ホバー表示（常時表示に影響しない） */
+  marker.addListener("mouseover",()=>{
+    if(activeInfoWindow!==info){
+      info.open(map,marker);
+      hoverOpen=true;
+    }
+  });
+
+  marker.addListener("mouseout",()=>{
+    if(hoverOpen){
+      info.close();
+      hoverOpen=false;
+    }
+  });
+
+  /* クリックで常時表示（1つのみ） */
+  marker.addListener("click",()=>{
+
+    if(activeInfoWindow && activeInfoWindow!==info){
+      activeInfoWindow.close();
+    }
+
+    info.open(map,marker);
+    activeInfoWindow=info;
+    hoverOpen=false;
+  });
+
   markers.push(marker);
 }
 
@@ -302,5 +343,6 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
