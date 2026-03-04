@@ -207,7 +207,13 @@ function lockCircle(center){
 
   document.getElementById("crosshair").style.display="none";
 
-  createCenterMarker(center);
+  /* 既存があれば削除 */
+if(centerMarker){
+  centerMarker.map = null;
+}
+
+/* 新しく作成して保持 */
+centerMarker = createCenterMarker(center);
 
   document.getElementById("lockBtn").classList.add("active");
   document.getElementById("lockBtn").innerText="固定中（クリックで解除）";
@@ -357,6 +363,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
