@@ -285,15 +285,15 @@ function createJobMarker(job){
 
   let hoverOpen=false;
 
-  /* ホバー表示（常時表示に影響しない） */
-  marker.addListener("mouseover",()=>{
+   /* ホバー表示（DOMに直接イベント） */
+  marker.element.addEventListener("mouseenter",()=>{
     if(activeInfoWindow!==info){
       info.open(map,marker);
       hoverOpen=true;
     }
   });
-
-  marker.addListener("mouseout",()=>{
+  
+  marker.element.addEventListener("mouseleave",()=>{
     if(hoverOpen){
       info.close();
       hoverOpen=false;
@@ -343,6 +343,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
