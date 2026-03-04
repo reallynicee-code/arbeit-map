@@ -173,19 +173,20 @@ function initMap(){
 
   /* スライダー */
   document.getElementById("radiusSlider").addEventListener("input",e=>{
+  
     let value=parseInt(e.target.value);
-
-    if(value<1000){
-      e.target.step=100;
-    }else{
-      e.target.step=1000;
+  
+    // 1000以上は表示だけ丸める
+    if(value>=1000){
       value=Math.round(value/1000)*1000;
-      e.target.value=value;
     }
-
+  
     radius=value;
-    document.getElementById("radiusLabel").innerText="半径 "+formatRadius(radius);
-
+    e.target.value=value;
+  
+    document.getElementById("radiusLabel").innerText=
+      "半径 "+formatRadius(radius);
+  
     updateCircle(locked?lockedCenter:map.getCenter());
   });
 
@@ -365,6 +366,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
