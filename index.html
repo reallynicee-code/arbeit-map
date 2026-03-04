@@ -191,36 +191,43 @@ function initMap(){
 
   /* 固定ボタン */
   document.getElementById("lockBtn").addEventListener("click",()=>{
+  
     if(locked){
+  
       locked=false;
       lockedCenter=null;
-      if(centerMarker) centerMarker.map=null;
+  
+      if(centerMarker){
+        centerMarker.setMap(null);
+        centerMarker=null;
+      }
+  
       document.getElementById("crosshair").style.display="block";
       document.getElementById("lockBtn").classList.remove("active");
       document.getElementById("lockBtn").innerText="円の位置を固定";
+  
+      updateCircle(map.getCenter());
+  
     }else{
       lockCircle(map.getCenter());
     }
+  
   });
-
-  document.getElementById("radiusLabel").innerText="半径 "+formatRadius(radius);
-}
-
+  
 /* 固定処理 */
 function lockCircle(center){
+
   locked=true;
   lockedCenter=center;
 
   document.getElementById("crosshair").style.display="none";
 
-  /* 既存があれば削除 */
-if (centerMarker) {
-  centerMarker.setMap(null);
-  centerMarker = null;
-}
+  if(centerMarker){
+    centerMarker.setMap(null);
+    centerMarker=null;
+  }
 
-/* 新しく作成して保持 */
-centerMarker = createCenterMarker(center);
+  centerMarker=createCenterMarker(center);
 
   document.getElementById("lockBtn").classList.add("active");
   document.getElementById("lockBtn").innerText="固定中（クリックで解除）";
@@ -365,6 +372,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
