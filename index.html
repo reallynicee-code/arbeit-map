@@ -215,21 +215,35 @@ function lockCircle(center){
   updateCircle(center);
 }
 
-/* 黒✕（常に円中心へ同期） */
+/* 円中心固定マーカー（黒縁白円＋中央黒点） */
+
 function createCenterMarker(position){
 
-  if(centerMarker) centerMarker.map=null;
+  const wrapper = document.createElement("div");
+  wrapper.style.width = "28px";
+  wrapper.style.height = "28px";
+  wrapper.style.display = "flex";
+  wrapper.style.alignItems = "center";
+  wrapper.style.justifyContent = "center";
 
-  const div=document.createElement("div");
-  div.style.color="black";
-  div.style.fontSize="28px";
-  div.style.fontWeight="bold";
-  div.innerHTML="✕";
+  wrapper.innerHTML = `
+    <svg width="28" height="28" viewBox="0 0 28 28">
+      <!-- 外側：黒縁の白円 -->
+      <circle cx="14" cy="14" r="12"
+        fill="white"
+        stroke="black"
+        stroke-width="2"/>
+      
+      <!-- 中央：小さい黒円 -->
+      <circle cx="14" cy="14" r="4"
+        fill="black"/>
+    </svg>
+  `;
 
-  centerMarker=new google.maps.marker.AdvancedMarkerElement({
+  return new google.maps.marker.AdvancedMarkerElement({
     map,
     position,
-    content:div
+    content: wrapper
   });
 }
 
@@ -343,6 +357,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
