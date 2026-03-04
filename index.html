@@ -112,16 +112,16 @@ let centerMarker=null;
 let activeInfoWindow=null;
 let markers=[];
 
-/* 求人データ */
-const jobs = [ { lat: 35.681236, lng: 139.767125, title: "東京駅カフェスタッフ", days: "週2日〜OK", wage: "時給1200円", image: "https://picsum.photos/300/120?1" },
-               { lat: 35.6895, lng: 139.6917, title: "新宿コンビニ店員", days: "週3日〜OK", wage: "時給1300円", image: "https://picsum.photos/300/120?2" }, 
-               { lat: 35.658034, lng: 139.701636, title: "渋谷居酒屋ホール", days: "週1日〜OK", wage: "時給1250円", image: "https://picsum.photos/300/120?3" }, 
-               { lat: 35.6794, lng: 139.7648, title: "KITTE丸の内販売スタッフ", days: "週2日〜OK", wage: "時給1250円", image: "https://picsum.photos/300/120?4" }, 
-               { lat: 35.6764, lng: 139.7632, title: "東京国際フォーラム受付", days: "週3日〜OK", wage: "時給1350円", image: "https://picsum.photos/300/120?5" } ];
+/* 求人データ（5件固定） */
+const jobs = [
+{ lat:35.681236,lng:139.767125,title:"東京駅カフェスタッフ",days:"週2日〜OK",wage:"時給1200円",image:"https://picsum.photos/300/120?1"},
+{ lat:35.6895,lng:139.6917,title:"新宿コンビニ店員",days:"週3日〜OK",wage:"時給1300円",image:"https://picsum.photos/300/120?2"},
+{ lat:35.658034,lng:139.701636,title:"渋谷居酒屋ホール",days:"週1日〜OK",wage:"時給1250円",image:"https://picsum.photos/300/120?3"},
+{ lat:35.6794,lng:139.7648,title:"KITTE丸の内販売スタッフ",days:"週2日〜OK",wage:"時給1250円",image:"https://picsum.photos/300/120?4"},
+{ lat:35.6764,lng:139.7632,title:"東京国際フォーラム受付",days:"週3日〜OK",wage:"時給1350円",image:"https://picsum.photos/300/120?5"}
+];
 
-function formatRadius(r){
-  return r<1000 ? r+" m" : (r/1000)+" km";
-}
+function formatRadius(r){ return r<1000 ? r+" m" : (r/1000)+" km"; }
 
 function initMap(){
 
@@ -131,109 +131,19 @@ function initMap(){
     mapId:"ed7852573fd62be93ad25879"
   });
 
-  /* 未固定時は常に中央更新 */
   map.addListener("idle",()=>{
-    if(!locked){
-      updateCircle(map.getCenter());
-    }
+    if(!locked){ updateCircle(map.getCenter()); }
   });
 
-  /* 検索 Autocomplete */
-  const input=document.getElementById("searchInput");
-  const autocomplete=new google.maps.places.Autocomplete(input);
-  autocomplete.bindTo("bounds",map);
-
-  autocomplete.addListener("place_changed",()=>{
-    const place=autocomplete.getPlace();
-    if(!place.geometry) return;
-    map.panTo(place.geometry.location);
-    map.setZoom(15);
-    lockCircle(place.geometry.location);
-  });
-
-  /* Enter検索 */
-  input.addEventListener("keydown",e=>{
-    if(e.key==="Enter"){
-      const geocoder=new google.maps.Geocoder();
-      geocoder.geocode({address:input.value},(results,status)=>{
-        if(status==="OK"){
-          map.panTo(results[0].geometry.location);
-          map.setZoom(15);
-          lockCircle(results[0].geometry.location);
-        }
-      });
-    }
-  });
-
-  /* スライダー */
   document.getElementById("radiusSlider").addEventListener("input",e=>{
-    let value=parseInt(e.target.value);
-
-    if(value<1000){
-      e.target.step=100;
-    }else{
-      e.target.step=1000;
-      value=Math.round(value/1000)*1000;
-      e.target.value=value;
-    }
-
-    radius=value;
+    radius=parseInt(e.target.value);
     document.getElementById("radiusLabel").innerText="半径 "+formatRadius(radius);
-
     updateCircle(locked?lockedCenter:map.getCenter());
-  });
-
-  /* 固定ボタン */
-  document.getElementById("lockBtn").addEventListener("click",()=>{
-    if(locked){
-      locked=false;
-      lockedCenter=null;
-      if(centerMarker) centerMarker.map=null;
-      document.getElementById("crosshair").style.display="block";
-      document.getElementById("lockBtn").classList.remove("active");
-      document.getElementById("lockBtn").innerText="円の位置を固定";
-    }else{
-      lockCircle(map.getCenter());
-    }
   });
 
   document.getElementById("radiusLabel").innerText="半径 "+formatRadius(radius);
 }
 
-/* 固定処理 */
-function lockCircle(center){
-  locked=true;
-  lockedCenter=center;
-
-  document.getElementById("crosshair").style.display="none";
-
-  createCenterMarker(center);
-
-  document.getElementById("lockBtn").classList.add("active");
-  document.getElementById("lockBtn").innerText="固定中（クリックで解除）";
-
-  updateCircle(center);
-}
-
-/* 黒✕（常に円中心へ同期） */
-function createCenterMarker(position){
-
-  if(centerMarker) centerMarker.map=null;
-
-  const div=document.createElement("div");
-  div.style.color="black";
-  div.style.fontSize="28px";
-  div.style.fontWeight="bold";
-  div.innerHTML="✕";
-
-  centerMarker=new google.maps.marker.AdvancedMarkerElement({
-    map,
-    position,
-    content:div
-  });
-}
-
-/* 円更新 */
 function updateCircle(center){
 
   if(circle) circle.setMap(null);
@@ -248,21 +158,16 @@ function updateCircle(center){
     fillOpacity:0.15
   });
 
-  if(locked && centerMarker){
-    centerMarker.position=center;
-  }
-
   showNearby(center.lat(),center.lng());
 }
 
-/* 青ピン */
 function createJobMarker(job){
 
   const pin=new google.maps.marker.PinElement({
     background:"#1e90ff",
     borderColor:"#1e90ff",
     glyphColor:"white",
-    glyph:"求"
+    glyphText:"求"
   });
 
   const marker=new google.maps.marker.AdvancedMarkerElement({
@@ -271,12 +176,50 @@ function createJobMarker(job){
     content:pin.element
   });
 
+  const infoWindow=new google.maps.InfoWindow({
+    content:`
+      <div style="width:220px">
+        <img src="${job.image}" style="width:100%;border-radius:6px;">
+        <h3 style="margin:6px 0 4px 0;font-size:14px;">${job.title}</h3>
+        <div style="font-size:13px;">${job.days}</div>
+        <div style="font-weight:bold;color:#ff4da6;">${job.wage}</div>
+      </div>`
+  });
+
+  /* ホバー表示 */
+  marker.addEventListener("gmp-mouseover",()=>{
+    if(activeInfoWindow!==infoWindow){
+      infoWindow.open({map,anchor:marker});
+    }
+  });
+
+  marker.addEventListener("gmp-mouseout",()=>{
+    if(activeInfoWindow!==infoWindow){
+      infoWindow.close();
+    }
+  });
+
+  /* クリックで常時表示（1つのみ） */
+  marker.addEventListener("gmp-click",()=>{
+
+    if(activeInfoWindow){
+      activeInfoWindow.close();
+    }
+
+    activeInfoWindow=infoWindow;
+    infoWindow.open({map,anchor:marker});
+  });
+
   markers.push(marker);
 }
 
 function showNearby(lat,lng){
   markers.forEach(m=>m.map=null);
   markers=[];
+  if(activeInfoWindow){
+    activeInfoWindow.close();
+    activeInfoWindow=null;
+  }
 
   jobs.forEach(job=>{
     const d=getDistance(lat,lng,job.lat,job.lng);
@@ -298,8 +241,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 }
 </script>
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAeN86oLR4R-KCV85VY3fawtP4SVmPkF2Q&libraries=marker,places&v=weekly&callback=initMap" async defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAeN86oLR4R-KCV85VY3fawtP4SVmPkF2Q&libraries=marker&v=weekly&callback=initMap" async defer></script>
 
 </body>
 </html>
-
