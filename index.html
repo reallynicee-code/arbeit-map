@@ -233,21 +233,23 @@ centerMarker = createCenterMarker(center);
 function createCenterMarker(position){
 
   const wrapper = document.createElement("div");
-  wrapper.style.width = "28px";
-  wrapper.style.height = "28px";
-  wrapper.style.display = "flex";
-  wrapper.style.alignItems = "center";
-  wrapper.style.justifyContent = "center";
 
   wrapper.innerHTML = `
-    <svg width="28" height="28" viewBox="0 0 28 28">
-      <circle cx="14" cy="14" r="12"
-        fill="white"
-        stroke="black"
-        stroke-width="2"/>
-      <circle cx="14" cy="14" r="4"
-        fill="black"/>
-    </svg>
+    <div style="
+      width:28px;
+      height:28px;
+      margin-left:-14px;
+      margin-top:-14px;
+    ">
+      <svg width="28" height="28" viewBox="0 0 28 28">
+        <circle cx="14" cy="14" r="12"
+          fill="white"
+          stroke="black"
+          stroke-width="2"/>
+        <circle cx="14" cy="14" r="4"
+          fill="black"/>
+      </svg>
+    </div>
   `;
 
   return new google.maps.marker.AdvancedMarkerElement({
@@ -370,6 +372,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
