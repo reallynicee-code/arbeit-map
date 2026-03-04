@@ -132,12 +132,18 @@ function initMap(){
   });
 
   /* 未固定時は常に中央更新 */
-  map.addListener("idle",()=>{
-    if(!locked){
+  map.addListener("center_changed", () => {
+    if (!locked) {
       updateCircle(map.getCenter());
     }
   });
 
+  map.addListener("zoom_changed", () => {
+  if (!locked) {
+    updateCircle(map.getCenter());
+  }
+});
+  
   /* 検索 Autocomplete */
   const input=document.getElementById("searchInput");
   const autocomplete=new google.maps.places.Autocomplete(input);
@@ -363,6 +369,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
