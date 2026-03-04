@@ -235,8 +235,9 @@ function createCenterMarker(position){
   const wrapper = document.createElement("div");
   wrapper.style.width = "28px";
   wrapper.style.height = "28px";
-  wrapper.style.position = "absolute";
-  wrapper.style.transform = "translate(-50%, -50%)";
+  wrapper.style.display = "flex";
+  wrapper.style.alignItems = "center";
+  wrapper.style.justifyContent = "center";
 
   wrapper.innerHTML = `
     <svg width="28" height="28" viewBox="0 0 28 28">
@@ -369,10 +370,6 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
-
-
-
-
 
 
 
