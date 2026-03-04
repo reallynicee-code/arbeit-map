@@ -240,13 +240,10 @@ function createCenterMarker(position){
 
   wrapper.innerHTML = `
     <svg width="28" height="28" viewBox="0 0 28 28">
-      <!-- 外側：黒縁の白円 -->
       <circle cx="14" cy="14" r="12"
         fill="white"
         stroke="black"
         stroke-width="2"/>
-      
-      <!-- 中央：小さい黒円 -->
       <circle cx="14" cy="14" r="4"
         fill="black"/>
     </svg>
@@ -255,7 +252,10 @@ function createCenterMarker(position){
   return new google.maps.marker.AdvancedMarkerElement({
     map,
     position,
-    content: wrapper
+    content: wrapper,
+
+    // 👇 これが超重要
+    anchor: new google.maps.Point(14, 14)
   });
 }
 
@@ -369,6 +369,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
