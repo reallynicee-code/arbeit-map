@@ -232,31 +232,20 @@ centerMarker = createCenterMarker(center);
 
 function createCenterMarker(position){
 
-  const wrapper = document.createElement("div");
-  wrapper.style.width = "28px";
-  wrapper.style.height = "28px";
-  wrapper.style.display = "flex";
-  wrapper.style.alignItems = "center";
-  wrapper.style.justifyContent = "center";
-
-  wrapper.innerHTML = `
-    <svg width="28" height="28" viewBox="0 0 28 28">
-      <circle cx="14" cy="14" r="12"
-        fill="white"
-        stroke="black"
-        stroke-width="2"/>
-      <circle cx="14" cy="14" r="4"
-        fill="black"/>
-    </svg>
-  `;
-
-  return new google.maps.marker.AdvancedMarkerElement({
+  return new google.maps.Marker({
     map,
     position,
-    content: wrapper
+    icon:{
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 10,
+      fillColor: "white",
+      fillOpacity: 1,
+      strokeColor: "black",
+      strokeWeight: 2
+    }
   });
 }
-
+  
 /* 円更新 */
 function updateCircle(center){
 
@@ -370,6 +359,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
