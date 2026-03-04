@@ -236,12 +236,18 @@ function createCenterMarker(position){
     map,
     position,
     icon:{
-      path: google.maps.SymbolPath.CIRCLE,
-      scale: 10,
-      fillColor: "white",
-      fillOpacity: 1,
-      strokeColor: "black",
-      strokeWeight: 2
+      url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28">
+          <circle cx="14" cy="14" r="12"
+            fill="white"
+            stroke="black"
+            stroke-width="2"/>
+          <circle cx="14" cy="14" r="4"
+            fill="black"/>
+        </svg>
+      `),
+      scaledSize: new google.maps.Size(28,28),
+      anchor: new google.maps.Point(14,14)
     }
   });
 }
@@ -359,6 +365,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
