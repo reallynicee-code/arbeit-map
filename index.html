@@ -113,11 +113,11 @@ let activeInfoWindow=null;
 let markers=[];
 
 /* 求人データ */
-const jobs=[
-  {lat:35.681236,lng:139.767125,title:"東京駅カフェスタッフ",days:"週2日〜OK",wage:"時給1200円",image:"https://picsum.photos/300/120?1"},
-  {lat:35.6895,lng:139.6917,title:"新宿コンビニ店員",days:"週3日〜OK",wage:"時給1300円",image:"https://picsum.photos/300/120?2"},
-  {lat:35.658034,lng:139.701636,title:"渋谷居酒屋ホール",days:"週1日〜OK",wage:"時給1250円",image:"https://picsum.photos/300/120?3"}
-];
+const jobs = [ { lat: 35.681236, lng: 139.767125, title: "東京駅カフェスタッフ", days: "週2日〜OK", wage: "時給1200円", image: "https://picsum.photos/300/120?1" },
+               { lat: 35.6895, lng: 139.6917, title: "新宿コンビニ店員", days: "週3日〜OK", wage: "時給1300円", image: "https://picsum.photos/300/120?2" }, 
+               { lat: 35.658034, lng: 139.701636, title: "渋谷居酒屋ホール", days: "週1日〜OK", wage: "時給1250円", image: "https://picsum.photos/300/120?3" }, 
+               { lat: 35.6794, lng: 139.7648, title: "KITTE丸の内販売スタッフ", days: "週2日〜OK", wage: "時給1250円", image: "https://picsum.photos/300/120?4" }, 
+               { lat: 35.6764, lng: 139.7632, title: "東京国際フォーラム受付", days: "週3日〜OK", wage: "時給1350円", image: "https://picsum.photos/300/120?5" } ];
 
 function formatRadius(r){
   return r<1000 ? r+" m" : (r/1000)+" km";
@@ -302,3 +302,4 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
