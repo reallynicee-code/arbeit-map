@@ -232,31 +232,26 @@ centerMarker = createCenterMarker(center);
 
 function createCenterMarker(position){
 
-  const wrapper = document.createElement("div");
-  wrapper.style.width = "28px";
-  wrapper.style.height = "28px";
-  wrapper.style.display = "flex";
-  wrapper.style.alignItems = "center";
-  wrapper.style.justifyContent = "center";
-
-  wrapper.innerHTML = `
-    <svg width="28" height="28" viewBox="0 0 28 28">
-      <circle cx="14" cy="14" r="12"
-        fill="white"
-        stroke="black"
-        stroke-width="2"/>
-      <circle cx="14" cy="14" r="4"
-        fill="black"/>
-    </svg>
-  `;
-
-  return new google.maps.marker.AdvancedMarkerElement({
+  return new google.maps.Marker({
     map,
     position,
-    content: wrapper
+    icon:{
+      url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28">
+          <circle cx="14" cy="14" r="12"
+            fill="white"
+            stroke="black"
+            stroke-width="2"/>
+          <circle cx="14" cy="14" r="4"
+            fill="black"/>
+        </svg>
+      `),
+      scaledSize: new google.maps.Size(28,28),
+      anchor: new google.maps.Point(14,14)
+    }
   });
 }
-
+  
 /* 円更新 */
 function updateCircle(center){
 
