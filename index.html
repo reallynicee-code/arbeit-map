@@ -86,6 +86,44 @@ html, body { height:100%; margin:0; }
   width:100%;
   transform:translateY(-50%);
 }
+  #detailPanel{
+  position:absolute;
+  top:0;
+  right:-50%;
+  width:50%;
+  height:100%;
+  background:white;
+  z-index:2000;
+  box-shadow:-4px 0 15px rgba(0,0,0,0.2);
+  transition:right 0.3s ease;
+  display:flex;
+  flex-direction:column;
+}
+
+#detailPanel.active{
+  right:0;
+}
+
+#detailHeader{
+  padding:10px;
+  background:#f5f5f5;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-weight:bold;
+}
+
+#detailHeader button{
+  border:none;
+  background:none;
+  font-size:16px;
+  cursor:pointer;
+}
+
+#detailFrame{
+  flex:1;
+  border:none;
+}
 </style>
 </head>
 
@@ -101,7 +139,14 @@ html, body { height:100%; margin:0; }
 </div>
 
 <div id="crosshair"></div>
-
+<div id="detailPanel">
+  <div id="detailHeader">
+    <span>求人詳細</span>
+    <button id="closeDetail">✕</button>
+  </div>
+  <iframe id="detailFrame"></iframe>
+</div>
+  
 <script>
 let map;
 let circle;
@@ -113,11 +158,11 @@ let activeInfoWindow=null;
 let markers=[];
 
 /* 求人データ（5件） */ 
-const jobs = [ { lat: 35.681236, lng: 139.767125, title: "東京駅カフェスタッフ", days: "週2日〜OK", wage: "時給1200円", image: "https://picsum.photos/300/120?1" },
-               { lat: 35.6895, lng: 139.6917, title: "新宿コンビニ店員", days: "週3日〜OK", wage: "時給1300円", image: "https://picsum.photos/300/120?2" }, 
-               { lat: 35.658034, lng: 139.701636, title: "渋谷居酒屋ホール", days: "週1日〜OK", wage: "時給1250円", image: "https://picsum.photos/300/120?3" },
-               { lat: 35.6794, lng: 139.7648, title: "KITTE丸の内販売スタッフ", days: "週2日〜OK", wage: "時給1250円", image: "https://picsum.photos/300/120?4" },
-               { lat: 35.6764, lng: 139.7632, title: "東京国際フォーラム受付", days: "週3日〜OK", wage: "時給1350円", image: "https://picsum.photos/300/120?5" } ];
+const jobs = [ { lat: 35.681236, lng: 139.767125, title: "東京駅カフェスタッフ", days: "週2日〜OK", wage: "時給1200円", image: "https://picsum.photos/300/120?1" , link: "https://example.com/affiliate1"},
+               { lat: 35.6895, lng: 139.6917, title: "新宿コンビニ店員", days: "週3日〜OK", wage: "時給1300円", image: "https://picsum.photos/300/120?2", link: "https://example.com/affiliate2" }, 
+               { lat: 35.658034, lng: 139.701636, title: "渋谷居酒屋ホール", days: "週1日〜OK", wage: "時給1250円", image: "https://picsum.photos/300/120?3" , link: "https://example.com/affiliate3"},
+               { lat: 35.6794, lng: 139.7648, title: "KITTE丸の内販売スタッフ", days: "週2日〜OK", wage: "時給1250円", image: "https://picsum.photos/300/120?4", link: "https://example.com/affiliate4" },
+               { lat: 35.6764, lng: 139.7632, title: "東京国際フォーラム受付", days: "週3日〜OK", wage: "時給1350円", image: "https://picsum.photos/300/120?5", link: "https://example.com/affiliate5" } ];
 
 function formatRadius(r){
   return r<1000 ? r+" m" : (r/1000)+" km";
@@ -366,6 +411,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
