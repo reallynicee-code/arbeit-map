@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>アルバイトマップ</title>
+
+<style>
+html, body { height:100%; margin:0; }
+#map { height:100%; }
+
+/* UI */
+#ui-panel{
+  position:absolute;
+  top:20px;
+  left:20px;
+  width:340px;
+  z-index:1000;
+  background:white;
+  padding:14px;
+  border-radius:12px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.18);
+  font-family:sans-serif;
+}
+
+#searchInput{
+  width:100%;
+  padding:8px;
+  font-size:14px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  box-sizing:border-box;
+}
+
+#radiusSlider{ width:100%; margin-top:12px; }
+
+#radiusLabel{
+  margin-top:6px;
+  font-size:13px;
+  text-align:right;
+}
+
+#lockBtn{
+  margin-top:10px;
+  width:100%;
+  padding:6px;
+  border-radius:6px;
+  border:none;
+  background:#ff4da6;
+  color:white;
+  cursor:pointer;
+}
+
+#lockBtn.active{ background:#333; }
+
+/* クロスヘア */
+#crosshair{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:30px;
+  height:30px;
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+  z-index:999;
+}
+
+#crosshair::before,
+#crosshair::after{
+  content:"";
+  position:absolute;
+  background:#ff4da6;
+}
+
+#crosshair::before{
+  left:50%;
+  top:0;
+  width:2px;
+  height:100%;
+  transform:translateX(-50%);
+}
+
+#crosshair::after{
+  top:50%;
+  left:0;
+  height:2px;
+  width:100%;
+  transform:translateY(-50%);
+}
+  #detailPanel{
+  position:absolute;
+  top:0;
+  right:-50%;
+  width:50%;
+  height:100%;
+  background:white;
+  z-index:2000;
+  box-shadow:-4px 0 15px rgba(0,0,0,0.2);
+  transition:right 0.3s ease;
+  display:flex;
+  flex-direction:column;
+}
+
+#detailPanel.active{
+  right:0;
+}
+
+#detailHeader{
+  padding:10px;
+  background:#f5f5f5;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-weight:bold;
+}
+
+#detailHeader button{
+  border:none;
+  background:none;
+  font-size:16px;
+  cursor:pointer;
+}
+
+#detailFrame{
+  flex:1;
+  border:none;
+}
+</style>
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<div id="ui-panel">
+  <input id="searchInput" placeholder="住所・駅・施設を検索">
+  <input type="range" id="radiusSlider" min="100" max="5000" step="100" value="1000">
+  <div id="radiusLabel"></div>
+  <button id="lockBtn">円の位置を固定</button>
+</div>
+
+<div id="crosshair"></div>
+<div id="detailPanel">
+  <div id="detailHeader">
+    <span>求人詳細</span>
+    <button id="closeDetail">✕</button>
+  </div>
+
+  <div id="detailHeader">
+    <span>求人詳細</span>
+    <button id="closeDetail">✕</button>
+  </div>
+
+  <div id="detailContent">
+
+    <img id="detailImage">
+
+    <h2 id="detailTitle"></h2>
+
+    <div id="detailDays"></div>
+
+    <div id="detailWage"></div>
+
+    <a id="applyBtn" target="_blank">応募ページへ</a>
+
+  </div>
+
+</div>
+  
+<script>
+let map;
+let circle;
+let radius=1000;
+let locked=false;
+let lockedCenter=null;
+let centerMarker=null;
+let activeInfoWindow=null;
+let markers=[];
+
+let jobs = [];
+
+fetch("jobs.json")
+  .then(response => response.json())
+  .then(data => {
+    jobs = data;
+    initMap();
+  });
+
+function formatRadius(r){
+  return r<1000 ? r+" m" : (r/1000)+" km";
+}
+
+function initMap(){
+
+  map=new google.maps.Map(document.getElementById("map"),{
+    center:{lat:35.681236,lng:139.767125},
+    zoom:14,
+    mapId:"ed7852573fd62be93ad25879"
+  });
+
+  /* 未固定時は常に中央更新 */
+  map.addListener("center_changed", () => {
+    if (!locked) {
+      updateCircle(map.getCenter());
+    }
+  });
+
+  map.addListener("zoom_changed", () => {
+  if (!locked) {
+    updateCircle(map.getCenter());
+  }
+});
+  
+  /* 検索 Autocomplete */
+  const input=document.getElementById("searchInput");
+  const autocomplete=new google.maps.places.Autocomplete(input);
+  autocomplete.bindTo("bounds",map);
+
+  autocomplete.addListener("place_changed",()=>{
+    const place=autocomplete.getPlace();
+    if(!place.geometry) return;
+    map.panTo(place.geometry.location);
+    map.setZoom(15);
+    lockCircle(place.geometry.location);
+  });
+
+  /* Enter検索 */
+  input.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){
+      const geocoder=new google.maps.Geocoder();
+      geocoder.geocode({address:input.value},(results,status)=>{
+        if(status==="OK"){
+          map.panTo(results[0].geometry.location);
+          map.setZoom(15);
+          lockCircle(results[0].geometry.location);
+        }
+      });
+    }
+  });
+
+  /* スライダー */
+  document.getElementById("radiusSlider").addEventListener("input",e=>{
+  
+    let value=parseInt(e.target.value);
+  
+    // 1000以上は表示だけ丸める
+    if(value>=1000){
+      value=Math.round(value/1000)*1000;
+    }
+  
+    radius=value;
+    e.target.value=value;
+  
+    document.getElementById("radiusLabel").innerText=
+      "半径 "+formatRadius(radius);
+  
+    updateCircle(locked?lockedCenter:map.getCenter());
+  });
+
+  /* 固定ボタン */
+  document.getElementById("lockBtn").addEventListener("click",()=>{
+    if(locked){
+      locked=false;
+      lockedCenter=null;
+      if(centerMarker) centerMarker.map=null;
+      document.getElementById("crosshair").style.display="block";
+      document.getElementById("lockBtn").classList.remove("active");
+      document.getElementById("lockBtn").innerText="円の位置を固定";
+    }else{
+      lockCircle(map.getCenter());
+    }
+  });
+
+  document.getElementById("radiusLabel").innerText="半径 "+formatRadius(radius);
+}
+
+/* 固定処理 */
+function lockCircle(center){
+  locked=true;
+  lockedCenter=center;
+
+  document.getElementById("crosshair").style.display="none";
+
+  /* 既存があれば削除 */
+if (centerMarker) {
+  centerMarker.setMap(null);
+  centerMarker = null;
+}
+
+/* 新しく作成して保持 */
+centerMarker = createCenterMarker(center);
+
+  document.getElementById("lockBtn").classList.add("active");
+  document.getElementById("lockBtn").innerText="固定中（クリックで解除）";
+
+  updateCircle(center);
+}
+
+/* 円中心固定マーカー（黒縁白円＋中央黒点） */
+
+function createCenterMarker(position){
+
+  return new google.maps.Marker({
+    map,
+    position,
+    icon:{
+      url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28">
+          <circle cx="14" cy="14" r="12"
+            fill="white"
+            stroke="black"
+            stroke-width="2"/>
+          <circle cx="14" cy="14" r="4"
+            fill="black"/>
+        </svg>
+      `),
+      scaledSize: new google.maps.Size(28,28),
+      anchor: new google.maps.Point(14,14)
+    }
+  });
+}
+  
+/* 円更新 */
+function updateCircle(center){
+
+  if(!circle){
+    circle = new google.maps.Circle({
+      map,
+      center,
+      radius,
+      strokeColor:"#ff4da6",
+      strokeWeight:2,
+      fillColor:"#ff4da6",
+      fillOpacity:0.15
+    });
+  } else {
+    circle.setCenter(center);
+    circle.setRadius(radius);
+  }
+
+  if(locked && centerMarker){
+    centerMarker.position = center;
+  }
+
+  showNearby(center.lat(), center.lng());
+}
+  
+/* 青ピン */
+function createJobMarker(job){
+
+  const pin=new google.maps.marker.PinElement({
+    background:"#1e90ff",
+    borderColor:"#1e90ff",
+    glyphColor:"white",
+    glyph:"求"
+  });
+
+  const marker=new google.maps.marker.AdvancedMarkerElement({
+    map,
+    position:{lat:job.lat,lng:job.lng},
+    content:pin.element
+  });
+
+  /* 吹き出し */
+  const info=new google.maps.InfoWindow({
+    content: `
+      <div style="width:240px">
+        <img src="${job.image}" style="width:100%;border-radius:8px;">
+        <h3 style="margin:8px 0 4px 0;">${job.title}</h3>
+        <div>${job.days}</div>
+        <div>${job.wage}</div>
+      </div>
+    `
+  });
+
+  let hoverOpen=false;
+
+   /* ホバー表示（DOMに直接イベント） */
+  marker.element.addEventListener("mouseenter",()=>{
+    if(activeInfoWindow!==info){
+      info.open(map,marker);
+      hoverOpen=true;
+    }
+  });
+  
+  marker.element.addEventListener("mouseleave",()=>{
+    if(hoverOpen){
+      info.close();
+      hoverOpen=false;
+    }
+  });
+
+  /* クリックで常時表示（1つのみ） */
+  marker.addListener("click",()=>{
+  
+    if(activeInfoWindow && activeInfoWindow!==info){
+      activeInfoWindow.close();
+    }
+  
+    info.open(map,marker);
+    activeInfoWindow=info;
+    hoverOpen=false;
+  
+    openDetail(job);
+  });
+
+  markers.push(marker);
+}
+
+function openDetail(job){
+
+  document.getElementById("detailPanel").classList.add("active");
+
+  document.getElementById("detailContent").innerHTML = `
+    <img src="${job.image}" style="width:100%;border-radius:8px">
+
+    <h2 style="margin-top:10px">${job.title}</h2>
+
+    <div style="margin-top:6px">
+      ${job.days}
+    </div>
+
+    <div style="margin-top:4px;font-weight:bold">
+      ${job.wage}
+    </div>
+
+    <a href="${job.link}" target="_blank"
+      style="
+        display:block;
+        margin-top:16px;
+        padding:10px;
+        text-align:center;
+        background:#ff4da6;
+        color:white;
+        text-decoration:none;
+        border-radius:8px;
+        font-weight:bold;
+      ">
+      求人サイトで応募する
+    </a>
+  `;
+}
+  
+function showNearby(lat,lng){
+  markers.forEach(m=>m.map=null);
+  markers=[];
+
+  jobs.forEach(job=>{
+    const d=getDistance(lat,lng,job.lat,job.lng);
+    if(d<=radius){
+      createJobMarker(job);
+    }
+  });
+}
+
+function getDistance(lat1,lng1,lat2,lng2){
+  const R=6371000;
+  const toRad=d=>d*Math.PI/180;
+  const dLat=toRad(lat2-lat1);
+  const dLng=toRad(lng2-lng1);
+  const a=Math.sin(dLat/2)**2+
+    Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*
+    Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAElM4ioi4-3Gsdq9HdmvmlmWsyvP04a_w&libraries=marker,places&v=weekly&callback=initMap" async defer></script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
