@@ -360,7 +360,7 @@ function createJobMarker(job){
             border-radius:6px;
             cursor:pointer;
           ">
-          詳細情報を見る
+          求人詳細
         </button>
       </div>
     `
@@ -399,8 +399,18 @@ function createJobMarker(job){
 }
 
 function openDetail(url){
-  document.getElementById("detailFrame").src = url;
-  document.getElementById("detailPanel").classList.add("active");
+
+  const width = 900;
+  const height = screen.height;
+
+  const left = screen.width - width;
+  const top = 0;
+
+  window.open(
+    url,
+    "_blank",
+    `width=${width},height=${height},left=${left},top=${top}`
+  );
 }
 
 document.getElementById("closeDetail").addEventListener("click",()=>{
@@ -436,6 +446,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
