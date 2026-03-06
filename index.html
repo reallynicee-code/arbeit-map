@@ -144,7 +144,27 @@ html, body { height:100%; margin:0; }
     <span>求人詳細</span>
     <button id="closeDetail">✕</button>
   </div>
-  <iframe id="detailFrame"></iframe>
+<div id="detailPanel">
+
+  <div id="detailHeader">
+    <span>求人詳細</span>
+    <button id="closeDetail">✕</button>
+  </div>
+
+  <div id="detailContent">
+
+    <img id="detailImage">
+
+    <h2 id="detailTitle"></h2>
+
+    <div id="detailDays"></div>
+
+    <div id="detailWage"></div>
+
+    <a id="applyBtn" target="_blank">応募ページへ</a>
+
+  </div>
+
 </div>
   
 <script>
@@ -349,19 +369,6 @@ function createJobMarker(job){
         <h3 style="margin:8px 0 4px 0;">${job.title}</h3>
         <div>${job.days}</div>
         <div>${job.wage}</div>
-        <button onclick="openDetail('${job.link}')"
-          style="
-            margin-top:8px;
-            width:100%;
-            padding:6px;
-            background:#ff4da6;
-            color:white;
-            border:none;
-            border-radius:6px;
-            cursor:pointer;
-          ">
-          求人詳細
-        </button>
       </div>
     `
   });
@@ -385,39 +392,54 @@ function createJobMarker(job){
 
   /* クリックで常時表示（1つのみ） */
   marker.addListener("click",()=>{
-
+  
     if(activeInfoWindow && activeInfoWindow!==info){
       activeInfoWindow.close();
     }
-
+  
     info.open(map,marker);
     activeInfoWindow=info;
     hoverOpen=false;
+  
+    openDetail(job);
   });
 
   markers.push(marker);
 }
 
-function openDetail(url){
+function openDetail(job){
 
-  const width = 700;
-  const height = window.outerHeight;
+  document.getElementById("detailPanel").classList.add("active");
 
-  const left = window.screenX + window.outerWidth - width;
-  const top = window.screenY;
+  document.getElementById("detailPanelContent").innerHTML = `
+    <img src="${job.image}" style="width:100%;border-radius:8px">
 
-  window.open(
-    url,
-    "_blank",
-    `width=${width},height=${height},left=${left},top=${top}`
-  );
+    <h2 style="margin-top:10px">${job.title}</h2>
 
+    <div style="margin-top:6px">
+      ${job.days}
+    </div>
+
+    <div style="margin-top:4px;font-weight:bold">
+      ${job.wage}
+    </div>
+
+    <a href="${job.link}" target="_blank"
+      style="
+        display:block;
+        margin-top:16px;
+        padding:10px;
+        text-align:center;
+        background:#ff4da6;
+        color:white;
+        text-decoration:none;
+        border-radius:8px;
+        font-weight:bold;
+      ">
+      求人サイトで応募する
+    </a>
+  `;
 }
-
-document.getElementById("closeDetail").addEventListener("click",()=>{
-  document.getElementById("detailPanel").classList.remove("active");
-  document.getElementById("detailFrame").src="";
-});
   
 function showNearby(lat,lng){
   markers.forEach(m=>m.map=null);
@@ -447,6 +469,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
