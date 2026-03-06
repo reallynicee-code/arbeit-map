@@ -401,16 +401,17 @@ function createJobMarker(job){
 function openDetail(url){
 
   const width = 900;
-  const height = screen.height;
+  const height = window.outerHeight;
 
-  const left = screen.width - width;
-  const top = 0;
+  const left = window.screenX + window.outerWidth - width;
+  const top = window.screenY;
 
   window.open(
     url,
     "_blank",
     `width=${width},height=${height},left=${left},top=${top}`
   );
+
 }
 
 document.getElementById("closeDetail").addEventListener("click",()=>{
@@ -446,6 +447,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
