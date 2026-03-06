@@ -144,7 +144,6 @@ html, body { height:100%; margin:0; }
     <span>求人詳細</span>
     <button id="closeDetail">✕</button>
   </div>
-<div id="detailPanel">
 
   <div id="detailHeader">
     <span>求人詳細</span>
@@ -411,7 +410,7 @@ function openDetail(job){
 
   document.getElementById("detailPanel").classList.add("active");
 
-  document.getElementById("detailPanelContent").innerHTML = `
+  document.getElementById("detailContent").innerHTML = `
     <img src="${job.image}" style="width:100%;border-radius:8px">
 
     <h2 style="margin-top:10px">${job.title}</h2>
@@ -469,6 +468,7 @@ function getDistance(lat1,lng1,lat2,lng2){
 
 </body>
 </html>
+
 
 
 
