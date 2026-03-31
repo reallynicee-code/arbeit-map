@@ -1,0 +1,143 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+#map {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* UI */
+#ui-panel{
+  position:absolute;
+  top:20px;
+  left:20px;
+  width:340px;
+  z-index:1000;
+  background:white;
+  padding:14px;
+  border-radius:12px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.18);
+  font-family:sans-serif;
+}
+
+#searchInput{
+  width:100%;
+  padding:8px;
+  font-size:14px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  box-sizing:border-box;
+}
+
+#radiusSlider{ width:100%; margin-top:12px; }
+
+#radiusLabel{
+  margin-top:6px;
+  font-size:13px;
+  text-align:right;
+}
+
+#lockBtn{
+  margin-top:10px;
+  width:100%;
+  padding:6px;
+  border-radius:6px;
+  border:none;
+  background:#ff4da6;
+  color:white;
+  cursor:pointer;
+}
+
+#lockBtn.active{ background:#333; }
+
+/* クロスヘア */
+#crosshair{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:30px;
+  height:30px;
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+  z-index:999;
+}
+
+#crosshair::before,
+#crosshair::after{
+  content:"";
+  position:absolute;
+  background:#ff4da6;
+}
+
+#crosshair::before{
+  left:50%;
+  top:0;
+  width:2px;
+  height:100%;
+  transform:translateX(-50%);
+}
+
+#crosshair::after{
+  top:50%;
+  left:0;
+  height:2px;
+  width:100%;
+  transform:translateY(-50%);
+}
+  
+#detailPanel{
+  position:absolute;
+  top:0;
+  right:-420px;
+  width:420px;
+  height:100%;
+  background:white;
+  z-index:2000;
+  box-shadow:-4px 0 15px rgba(0,0,0,0.2);
+  transition:right 0.3s ease;
+  display:flex;
+  flex-direction:column;
+  overflow-y:auto;
+}
+
+#detailPanel.active{
+  right:0;
+}
+
+#detailHeader{
+  padding:10px;
+  background:#f5f5f5;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-weight:bold;
+}
+
+#detailHeader button{
+  border:none;
+  background:none;
+  font-size:16px;
+  cursor:pointer;
+}
+
+#detailFrame{
+  flex:1;
+  border:none;
+}
+
+#jobCount {
+  position: absolute;
+  bottom: 80px;
+  right: 20px;
+  background: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  z-index: 10;
+}

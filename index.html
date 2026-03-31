@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>アルバイトマップ</title>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<div id="ui-panel">
+  <input id="searchInput" placeholder="住所・駅・施設を検索">
+  <input type="range" id="radiusSlider" min="100" max="5000" step="100" value="1000">
+  <div id="radiusLabel"></div>
+  <button id="lockBtn">円の位置を固定</button>
+</div>
+
+<div id="crosshair"></div>
+
+<div id="jobCount"></div>
+
+<div id="detailPanel">
+
+  <div id="detailHeader">
+    <span>求人詳細</span>
+    <button id="closeDetail">✕</button>
+  </div>
+
+  <div id="detailContent">
+
+    <img id="detailImage">
+
+    <h2 id="detailTitle"></h2>
+
+    <div id="detailDays"></div>
+
+    <div id="detailWage"></div>
+
+    <a id="applyBtn" target="_blank">応募ページへ</a>
+
+  </div>
+
+</div>
+
+<script src="script.js"></script>
+
+<script async
+src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAElM4ioi4-3Gsdq9HdmvmlmWsyvP04a_w&libraries=marker,places&v=weekly&callback=initMap">
+</script>
+
+</body>
+</html>
